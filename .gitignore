@@ -33,3 +33,5 @@ Makefile
 *.l[doa]
 *.loT
 *.orig
+tags
+.*.sw[a-z]
