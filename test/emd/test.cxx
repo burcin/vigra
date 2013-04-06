@@ -35,9 +35,8 @@
 
 #include <unittest.hxx>
 #include <vigra/emd.hxx>
-extern "C" {
-#include "emd.h"
-}
+
+#include "emd.hxx"
 
 using namespace vigra;
 
@@ -131,9 +130,20 @@ public:
         }
     }
 
-    // temporary workaround for a distance function that works with the
+    /*******************************************************************/
+    // distance functions
+    //
+    // temporary workaround distance functions which work with the
     // definition in the original emd sources.
     // Should be replaced by a functor.
+
+    // L1 norm in one dimension
+    static ValueType dist_l1(int* F1, int* F2)
+    {
+        return std::abs(*F1 - *F2);
+    }
+
+    // Matrix based distance as defined by the original example2
     static ValueType dist_example2(int* F1, int* F2)
     {
         // Cost matrix as defined in example2 of original sources
@@ -147,6 +157,9 @@ public:
             };
         return _COST[*F1][*F2];
     }
+
+    // end distance functions
+    /*******************************************************************/
 
     // example 2 on
     // http://robotics.stanford.edu/~rubner/emd/default.htm
@@ -183,6 +196,52 @@ public:
         checkFlowProperties(&s1, &s2, flow, flowSize);
     }
 
+    void testEMDEmptyInOut()
+    {
+        feature_t   emptyFeatures[0] = {},
+                    nonemptyFeatures[3] = { 0, 1, 2 };
+        ValueType   emptyWeights[0] = {},
+                    nonemptyWeights[3] = { 1, 5, 8 };
+        signature_t emptySignature = { 0, emptyFeatures, emptyWeights},
+                    nonemptySignature = { 3, nonemptyFeatures,
+                        nonemptyWeights};
+
+        ValueType   e;
+        flow_t      flow[7];
+        int         i, flowSize;
+        try
+        {
+        e = emd(&emptySignature, &emptySignature, dist_l1, flow, &flowSize);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nSource signature cannot be empty!");
+            std::string message(c.what());
+            should(0 == message.compare(0, expected.length(), expected));
+        }
+
+        try
+        {
+        e = emd(&nonemptySignature, &emptySignature, dist_l1, flow, &flowSize);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nTarget signature cannot be empty!");
+            std::string message(c.what());
+            should(0 == message.compare(0, expected.length(), expected));
+        }
+
+        try
+        {
+        e = emd(&emptySignature, &nonemptySignature, dist_l1, flow, &flowSize);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nSource signature cannot be empty!");
+            std::string message(c.what());
+            should(0 == message.compare(0, expected.length(), expected));
+        }
+    }
 };
 
 
@@ -193,6 +252,7 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
         : vigra::test_suite("HistogramDistanceTestSuite")
     {
         add(testCase(&EarthMoverDistanceTest::testEMD_RTG_example2));
+        add(testCase(&EarthMoverDistanceTest::testEMDEmptyInOut));
     }
 };
 

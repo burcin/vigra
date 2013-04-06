@@ -17,7 +17,9 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include "emd.h"
+#include "emd.hxx"
+
+#include <vigra/error.hxx>
 
 #define DEBUG_LEVEL 0
 /*
@@ -109,6 +111,15 @@ float emd(signature_t *Signature1, signature_t *Signature2,
   flow_t *FlowP;
   node1_t U[MAX_SIG_SIZE1], V[MAX_SIG_SIZE1];
 
+  vigra_precondition(Signature1->n > 0, "Source signature cannot be empty!");
+  vigra_precondition(Signature2->n > 0, "Target signature cannot be empty!");
+  if (_n1 > MAX_SIG_SIZE || _n2 > MAX_SIG_SIZE)
+    {
+        std::ostringstream s;
+        s<<"emd: Signature size is limited to "<<MAX_SIG_SIZE<<std::endl;
+        vigra_precondition(false, s.str());
+    }
+
   w = init(Signature1, Signature2, Dist);
 
 #if DEBUG_LEVEL > 1
@@ -193,12 +204,6 @@ static float init(signature_t *Signature1, signature_t *Signature2,
   _n1 = Signature1->n;
   _n2 = Signature2->n;
 
-  if (_n1 > MAX_SIG_SIZE || _n2 > MAX_SIG_SIZE)
-    {
-      fprintf(stderr, "emd: Signature size is limited to %d\n", MAX_SIG_SIZE);
-      exit(1);
-    }
-  
   /* COMPUTE THE DISTANCE MATRIX */
   _maxC = 0;
   for(i=0, P1=Signature1->Features; i < _n1; i++, P1++)
@@ -390,12 +395,11 @@ static void findBasicVariables(node1_t *U, node1_t *V)
 	    }
 	}
      if (! found)
-       {
-	 fprintf(stderr, "emd: Unexpected error in findBasicVariables!\n");
-	 fprintf(stderr, "This typically happens when the EPSILON defined in\n");
-	 fprintf(stderr, "emd.h is not right for the scale of the problem.\n");
-	 exit(1);
-       }
+     {
+         vigra_fail("emd: Unexpected error in findBasicVariables!\n"
+                 "This typically happens when the EPSILON defined in\n"
+                 "emd.h is not right for the scale of the problem.");
+     }
     }
 }
 
@@ -431,8 +435,7 @@ static int isOptimal(node1_t *U, node1_t *V)
 
    if (deltaMin == INFINITY)
      {
-       fprintf(stderr, "emd: Unexpected error in isOptimal.\n");
-       exit(0);
+       vigra_fail("emd: Unexpected error in isOptimal.");
      }
    
    _EnterX->i = minI;
@@ -605,8 +608,7 @@ static int findLoop(node2_t **Loop)
   
   if (CurX == Loop)
     {
-      fprintf(stderr, "emd: Unexpected error in findLoop!\n");
-      exit(1);
+      vigra_fail("emd: Unexpected error in findLoop!");
     }
 #if DEBUG_LEVEL > 3
   printf("FOUND LOOP:\n");
