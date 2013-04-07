@@ -222,6 +222,7 @@ static float init(signature_t *Signature1, signature_t *Signature2,
       sSum += Signature1->Weights[i];
       _RowsX[i] = NULL;
     }
+  vigra_precondition(sSum > 0, "Total weight of source signature cannot be 0!");
   dSum = 0.0;
   for(j=0; j < _n2; j++)
     {
@@ -229,6 +230,7 @@ static float init(signature_t *Signature1, signature_t *Signature2,
       dSum += Signature2->Weights[j];
       _ColsX[j] = NULL;
     }
+  vigra_precondition(dSum > 0, "Total weight of target signature cannot be 0!");
 
   /* IF SUPPLY DIFFERENT THAN THE DEMAND, ADD A ZERO-COST DUMMY CLUSTER */
   diff = sSum - dSum;

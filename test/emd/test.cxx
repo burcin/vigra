@@ -197,19 +197,26 @@ public:
         checkFlowProperties(&s1, &s2, flow, flowSize);
     }
 
+    // Test if emd() behaves properly for empty and too large source or
+    // target signatures.
     void testEMDEmptyInOut()
     {
         feature_t   emptyFeatures[0] = {},
+                    zeroFeatures[5] = {0, 1, 2, 3, 4},
                     nonemptyFeatures[3] = { 0, 1, 2 };
         ValueType   emptyWeights[0] = {},
+                    zeroWeights[5] = {0, 0, 0, 0, 0},
                     nonemptyWeights[3] = { 1, 5, 8 };
         signature_t emptySignature = { 0, emptyFeatures, emptyWeights},
+                    zeroSignature = { 5, zeroFeatures, zeroWeights},
                     nonemptySignature = { 3, nonemptyFeatures,
                         nonemptyWeights};
 
         ValueType   e;
-        flow_t      flow[7];
+        flow_t      flow[7]; // flow size is bounded by sig1->n + sig2->n - 1
         int         flowSize;
+
+        // Empty signatures
         try
         {
         e = emd(&emptySignature, &emptySignature, dist_l1, flow, &flowSize);
@@ -245,6 +252,8 @@ public:
             shouldMsg(0 == message.compare(0, expected.length(), expected),
                     "No error raised for empty source signature");
         }
+
+        // Too large signatures
         signature_t bigSignature = {MAX_SIG_SIZE + 1, emptyFeatures,
             emptyWeights};
         try
@@ -268,6 +277,41 @@ public:
             std::string message(c.what());
             shouldMsg(0 == message.compare(0, expected.length(), expected),
                     "No error raised for too big target signature.");
+        }
+
+        // Zero filled signatures
+        try
+        {
+        e = emd(&zeroSignature, &zeroSignature, dist_l1, flow, &flowSize);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nTotal weight of source signature cannot be 0!");
+            std::string message(c.what());
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for zero filled source signature.");
+        }
+        try
+        {
+        e = emd(&zeroSignature, &nonemptySignature, dist_l1, flow, &flowSize);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nTotal weight of source signature cannot be 0!");
+            std::string message(c.what());
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for zero filled source and target  signatures.");
+        }
+        try
+        {
+        e = emd(&nonemptySignature, &zeroSignature, dist_l1, flow, &flowSize);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nTotal weight of target signature cannot be 0!");
+            std::string message(c.what());
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for zero filled target signature.");
         }
     }
 };
