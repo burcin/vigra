@@ -174,7 +174,7 @@ public:
 
         ValueType   e;
         flow_t      flow[7];
-        int         i, flowSize;
+        int         flowSize;
 
         /* original source returns
          *
@@ -192,7 +192,8 @@ public:
          */
         e = emd(&s1, &s2, dist_example2, flow, &flowSize);
         shouldEqualMessage(flowSize, 7, "flow should have 7 items");
-        shouldEqualToleranceMessage(e, 1.888889, 1e-6, "Earth Moving Distance not withing tolerance");
+        shouldEqualToleranceMessage(e, 1.888889, 1e-6,
+                "Earth Moving Distance not within tolerance");
         checkFlowProperties(&s1, &s2, flow, flowSize);
     }
 
@@ -208,7 +209,7 @@ public:
 
         ValueType   e;
         flow_t      flow[7];
-        int         i, flowSize;
+        int         flowSize;
         try
         {
         e = emd(&emptySignature, &emptySignature, dist_l1, flow, &flowSize);
@@ -217,7 +218,8 @@ public:
         {
             std::string expected("\nPrecondition violation!\nSource signature cannot be empty!");
             std::string message(c.what());
-            should(0 == message.compare(0, expected.length(), expected));
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for empty source signature");
         }
 
         try
@@ -228,7 +230,8 @@ public:
         {
             std::string expected("\nPrecondition violation!\nTarget signature cannot be empty!");
             std::string message(c.what());
-            should(0 == message.compare(0, expected.length(), expected));
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for empty target signature");
         }
 
         try
@@ -239,7 +242,32 @@ public:
         {
             std::string expected("\nPrecondition violation!\nSource signature cannot be empty!");
             std::string message(c.what());
-            should(0 == message.compare(0, expected.length(), expected));
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for empty source signature");
+        }
+        signature_t bigSignature = {MAX_SIG_SIZE + 1, emptyFeatures,
+            emptyWeights};
+        try
+        {
+        e = emd(&bigSignature, &nonemptySignature, dist_l1, NULL, NULL);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nemd: Signature size is limited to ");
+            std::string message(c.what());
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for too big source signature");
+        }
+        try
+        {
+        e = emd(&nonemptySignature, &bigSignature, dist_l1, NULL, NULL);
+        }
+        catch(vigra::ContractViolation &c)
+        {
+            std::string expected("\nPrecondition violation!\nemd: Signature size is limited to ");
+            std::string message(c.what());
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for too big target signature.");
         }
     }
 };

@@ -113,7 +113,7 @@ float emd(signature_t *Signature1, signature_t *Signature2,
 
   vigra_precondition(Signature1->n > 0, "Source signature cannot be empty!");
   vigra_precondition(Signature2->n > 0, "Target signature cannot be empty!");
-  if (_n1 > MAX_SIG_SIZE || _n2 > MAX_SIG_SIZE)
+  if (Signature1->n > MAX_SIG_SIZE || Signature2->n > MAX_SIG_SIZE)
     {
         std::ostringstream s;
         s<<"emd: Signature size is limited to "<<MAX_SIG_SIZE<<std::endl;
