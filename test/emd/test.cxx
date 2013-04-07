@@ -50,11 +50,14 @@ public:
     typedef float ValueType;
     const ValueType errorTolerance;
 
-    EarthMoverDistanceTest() : errorTolerance(1e-6)
+    EarthMoverDistanceTest() : errorTolerance(1e-5)
     {
         // tests should be deterministic
         random.seed(0);
     }
+
+    /*******************************************************************/
+    // utility functions
 
     // Check that the flow given by Flow between signatures Signature1 and
     // Signature2 satisfies some basic properties.
@@ -84,9 +87,11 @@ public:
         ValueType source_total = 0;
         ValueType dest_total = 0;
         ValueType total_flow = 0;
-        // check for positive flow, compute total flow and make sure the
-        // origin and destination labels on the flow correspond to valid
-        // labels of the source and target signatures
+        // Following loop
+        //  - checks for positive flow,
+        //  - computes total flow,
+        //  - makes sure the origin and destination labels are valid
+        //  - verifies that there are no duplicate arrows in the flow
         for (int i=0; i < FlowSize; ++i)
         {
             shouldMsg(Flow[i].amount >= 0, "flow in the wrong direction");
@@ -96,6 +101,12 @@ public:
                     "Flow origin label not found in Signature");
             shouldMsg(Flow[i].to >=0 && Flow[i].to < Signature2->n,
                     "Flow destination label not found in Signature");
+            for (int j=i+1; j < FlowSize; ++j)
+            {
+                if(Flow[i].from == Flow[j].from && Flow[i].to == Flow[j].to)
+                    shouldMsg(false,
+                            "flow contains duplicate arrows");
+            }
         }
 
         // compute total initial and target weights
@@ -120,7 +131,10 @@ public:
                 if(Flow[j].from == i)
                     tot += Flow[j].amount;
             }
-            shouldMsg(tot <= Signature1->Weights[i] + errorTolerance,
+            // FIXME: floats are notoriously error prone
+            // the scaling factor below should at least be computed based
+            // on precision and size of source/target signatures
+            shouldMsg(tot <= Signature1->Weights[i] + errorTolerance*1e4,
                     "flow uses more earth than available in bin");
         }
 
@@ -133,7 +147,10 @@ public:
                 if(Flow[j].to == i)
                     tot += Flow[j].amount;
             }
-            shouldMsg(tot <= Signature2->Weights[i] + errorTolerance,
+            // FIXME: floats are notoriously error prone
+            // the scaling factor below should at least be computed based
+            // on precision and size of source/target signatures
+            shouldMsg(tot <= Signature2->Weights[i] + errorTolerance*1e4,
                     "overflow in target bin");
         }
     }
@@ -412,6 +429,61 @@ public:
             }
         }
     }
+
+    // Test if emd() is symmetric  for randomly generated input pairs.
+    //
+    // If s1 and s2 are signatures with equal total weight, then
+    // emd(s1, s2) == emd(s2, s1) since emd() is a metric.
+    void testEMDRandomSymmetric()
+    {
+        // max bin sizes
+        int binBounds[] = {10, 15, 20, 50, 100};
+        // how many random signatures should be generated for each size
+        const int nTriesPerSize = 10;
+        // total weight of the signature will be numberOfBins * weightFactor
+        const ValueType weightFactor = 10;
+
+        ValueType e1, e2;
+        flow_t *oFlow, *rFlow;
+        int oFlowSize, rFlowSize;
+        signature_t *sSig, *dSig;
+
+        int lenBinBounds = sizeof(binBounds)/sizeof(int);
+        for (int i=0; i < lenBinBounds; ++i)
+        {
+            int sBound = binBounds[i];
+            for (int j=0; j < lenBinBounds; ++j)
+            {
+                int dBound = binBounds[j];
+                // flow size is bounded by sBound + dBound - 1
+                oFlow = new flow_t[sBound + dBound  - 1];
+                rFlow = new flow_t[sBound + dBound  - 1];
+                for (int k=0; k < nTriesPerSize; ++k)
+                {
+                    sSig = new signature_t;
+                    dSig = new signature_t;
+                    // generateRandomSignature allocates memory for sig
+                    generateRandomSignature(sSig, sBound*dBound * weightFactor, sBound);
+                    generateRandomSignature(dSig, sBound*dBound * weightFactor, dBound);
+                    e1 = emd(sSig, dSig, dist_l1, oFlow, &oFlowSize);
+                    checkFlowProperties(sSig, dSig, oFlow, oFlowSize);
+
+                    e2 = emd(dSig, sSig, dist_l1, rFlow, &rFlowSize);
+                    checkFlowProperties(dSig, sSig, rFlow, rFlowSize);
+                    shouldEqualToleranceMessage(e1, e2, errorTolerance,
+                            "emd(s1, s2) != emd(s2, s1)");
+                    shouldMsg(oFlowSize == rFlowSize,
+                            "Flows from emd(s1, s2) and emd(s2, s1) should have the same size.");
+
+                    // free stuff
+                    freeSignature(sSig);
+                    freeSignature(dSig);
+                }
+                delete [] oFlow;
+                delete [] rFlow;
+            }
+        }
+    }
 };
 
 
@@ -424,6 +496,7 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
         add(testCase(&EarthMoverDistanceTest::testEMD_RTG_example2));
         add(testCase(&EarthMoverDistanceTest::testEMDEmptyInOut));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomToSelf));
+        add(testCase(&EarthMoverDistanceTest::testEMDRandomSymmetric));
     }
 };
 
