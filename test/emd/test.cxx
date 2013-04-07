@@ -35,6 +35,8 @@
 
 #include <unittest.hxx>
 #include <vigra/emd.hxx>
+#include <vigra/random.hxx>
+#include <vigra/error.hxx>
 
 #include "emd.hxx"
 
@@ -42,12 +44,17 @@ using namespace vigra;
 
 class EarthMoverDistanceTest
 {
+    RandomMT19937 random;
+
 public:
-
-    EarthMoverDistanceTest()
-    {}
-
     typedef float ValueType;
+    const ValueType errorTolerance;
+
+    EarthMoverDistanceTest() : errorTolerance(1e-6)
+    {
+        // tests should be deterministic
+        random.seed(0);
+    }
 
     // Check that the flow given by Flow between signatures Signature1 and
     // Signature2 satisfies some basic properties.
@@ -100,7 +107,8 @@ public:
         {
             dest_total += Signature2->Weights[i];
         }
-        shouldMsg(total_flow == std::min(source_total, dest_total),
+        shouldEqualToleranceMessage(std::min(source_total, dest_total),
+                total_flow, errorTolerance,
                 "total flow more than minimum of total initial or target");
 
         // check if source bins are used within their limits
@@ -112,7 +120,7 @@ public:
                 if(Flow[j].from == i)
                     tot += Flow[j].amount;
             }
-            shouldMsg(tot <= Signature1->Weights[i],
+            shouldMsg(tot <= Signature1->Weights[i] + errorTolerance,
                     "flow uses more earth than available in bin");
         }
 
@@ -125,9 +133,52 @@ public:
                 if(Flow[j].to == i)
                     tot += Flow[j].amount;
             }
-            shouldMsg(tot <= Signature2->Weights[i],
+            shouldMsg(tot <= Signature2->Weights[i] + errorTolerance,
                     "overflow in target bin");
         }
+    }
+
+    // Generate a random signature with given totalWeight.
+    // If randomBinCount = 1, number of bins is selected randomly in
+    // [1, maxBin]. Otherwise, it is taken to be maxBins.
+    void generateRandomSignature(signature_t *signature,
+            ValueType totalWeight, int maxBins, bool randomBinCount=1)
+    {
+        vigra_precondition(maxBins > 0,
+                "Refusing to generate empty random signature.");
+        int nBins;
+
+        if (!randomBinCount)
+            nBins = maxBins;
+        else
+            nBins = random.uniformInt(maxBins) + 1; // avoid 0
+
+        signature->n = nBins;
+        signature->Features = new feature_t[nBins];
+        signature->Weights = new ValueType[nBins];
+
+        ValueType currentTotal = 0;
+        for (int i=0; i < nBins; ++i)
+        {
+            signature->Features[i] = i;
+            signature->Weights[i] = random.uniform(0, totalWeight*maxBins);
+            currentTotal += signature->Weights[i];
+        }
+        // normalize - adjust to totalWeight
+        ValueType scaleFactor = currentTotal/totalWeight;
+        for (int i=0; i < nBins; ++i)
+        {
+            signature->Weights[i] /= scaleFactor;
+        }
+    }
+
+    // This is used to free signatures allocated by
+    // generateRandomSignature()
+    void freeSignature(signature_t *sig)
+    {
+        delete [] sig->Features;
+        delete [] sig->Weights;
+        delete sig;
     }
 
     /*******************************************************************/
@@ -192,7 +243,7 @@ public:
          */
         e = emd(&s1, &s2, dist_example2, flow, &flowSize);
         shouldEqualMessage(flowSize, 7, "flow should have 7 items");
-        shouldEqualToleranceMessage(e, 1.888889, 1e-6,
+        shouldEqualToleranceMessage(e, 1.888889, errorTolerance,
                 "Earth Moving Distance not within tolerance");
         checkFlowProperties(&s1, &s2, flow, flowSize);
     }
@@ -314,6 +365,53 @@ public:
                     "No error raised for zero filled target signature.");
         }
     }
+
+    // Test emd() between identical randomly generated input - output
+    // signatures.
+    void testEMDRandomToSelf()
+    {
+        // max bin sizes
+        int binBounds[] = {10, 15, 20, 50, 100};
+        // how many random signatures should be generated for each size
+        const int nTriesPerSize = 100;
+        // total weight of the signature will be numberOfBins * weightFactor
+        const ValueType weightFactor = 100;
+
+        ValueType e;
+        flow_t* flow;
+        int flowSize;
+        signature_t* sig;
+
+        // Mighty compiler gods, make C++11 available, save us from our sins
+        int lenBinBounds = sizeof(binBounds)/sizeof(int);
+        //std::vector<int> v_binBounds(binBounds,
+        //        binBounds + sizeof(binBounds)/sizeof(int));
+        //for(std::vector<int>::const_iterator itr = v_binBounds.begin();
+        //        itr != v_binBounds.end(); ++itr)
+        for (int i=0; i < lenBinBounds; ++i)
+        {
+            int cBound = binBounds[i];
+            for (int j=0; j < nTriesPerSize; ++j)
+            {
+                sig = new signature_t;
+                // generateRandomSignature allocates memory for sig
+                generateRandomSignature(sig, cBound * weightFactor, cBound);
+                // flow size is bounded by n1 + n2 - 1 where n1 and n2 is the
+                // number of bins in the source and target signatures
+                // respectively
+                flow = new flow_t[cBound*2 - 1];
+                e = emd(sig, sig, dist_l1, flow, &flowSize);
+                shouldMsg(e == 0, "EMD to self should be 0");
+                shouldMsg(flowSize == sig->n,
+                        "Flow to self should have one arrow for each bin in the signature.");
+                checkFlowProperties(sig, sig, flow, flowSize);
+
+                // free stuff
+                freeSignature(sig);
+                delete [] flow;
+            }
+        }
+    }
 };
 
 
@@ -325,6 +423,7 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
     {
         add(testCase(&EarthMoverDistanceTest::testEMD_RTG_example2));
         add(testCase(&EarthMoverDistanceTest::testEMDEmptyInOut));
+        add(testCase(&EarthMoverDistanceTest::testEMDRandomToSelf));
     }
 };
 
