@@ -198,6 +198,32 @@ public:
         delete sig;
     }
 
+    void scaleSignature(signature_t* sig, ValueType factor)
+    {
+        for (int i=0; i < sig->n; ++i)
+        {
+            sig->Weights[i] *= factor;
+        }
+    }
+
+    void printFlow(flow_t *flow, int flowSize)
+    {
+        std::cout<<"flow: "<<std::endl;
+        std::cout<<"from\tto\tamount"<<std::endl;
+        for (int i=0; i < flowSize; i++)
+            if (flow[i].amount > 0)
+                std::cout<<flow[i].from<<" "<<flow[i].to<<" "<<flow[i].amount<<std::endl;
+    }
+
+    void printSignature(signature_t *sig)
+    {
+        std::cout<<"signature:"<<std::endl;
+        for (int i=0; i < sig->n; ++i)
+        {
+            std::cout<<"label: "<<sig->Features[i]<<" weight: "<<sig->Weights[i]<<std::endl;
+        }
+    }
+
     /*******************************************************************/
     // distance functions
     //
@@ -594,6 +620,61 @@ public:
             }
         }
     }
+
+    void testEMDRandomScaleWeights()
+    {
+        // max bin sizes
+        int binBounds[] = {10, 15, 20, 50, 100};
+        // how many random signatures should be generated for each size
+        const int nTriesPerSize = 10;
+        // bound for the total weight of the signatures
+        const ValueType maxWeight = 1000;
+
+        ValueType e1, e2, scaleFactor;
+        flow_t *flow;
+        int flowSize;
+        signature_t *sSig, *dSig;
+
+        int lenBinBounds = sizeof(binBounds)/sizeof(int);
+        for (int i=0; i < lenBinBounds; ++i)
+        {
+            int sBound = binBounds[i];
+            for (int j=0; j < lenBinBounds; ++j)
+            {
+                int dBound = binBounds[j];
+                // flow size is bounded by sBound + dBound - 1
+                flow = new flow_t[sBound + dBound  - 1];
+                for (int k=0; k < nTriesPerSize; ++k)
+                {
+                    sSig = new signature_t;
+                    dSig = new signature_t;
+
+                    // generateRandomSignature allocates memory for sig
+                    generateRandomSignature(sSig,
+                            random.uniform(0., maxWeight), sBound);
+                    generateRandomSignature(dSig,
+                            random.uniform(0., maxWeight), dBound);
+                    e1 = emd(sSig, dSig, dist_l1, flow, &flowSize);
+                    checkFlowProperties(sSig, dSig, flow, flowSize);
+
+                    // scale source and target weights
+                    scaleFactor = random.uniform(.5, 5.);
+                    scaleSignature(sSig, scaleFactor);
+                    scaleSignature(dSig, scaleFactor);
+
+                    e2 = emd(sSig, dSig, dist_l1, flow, &flowSize);
+                    shouldEqualToleranceMessage(e1, e2, errorTolerance,
+                            "emd should be invariant under scaling weights.");
+                    checkFlowProperties(sSig, dSig, flow, flowSize);
+
+                    // free stuff
+                    freeSignature(sSig);
+                    freeSignature(dSig);
+                }
+                delete [] flow;
+            }
+        }
+    }
 };
 
 
@@ -609,6 +690,7 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
         add(testCase(&EarthMoverDistanceTest::testEMDRandomSymmetric));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomOneToOne));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomOneMany));
+        add(testCase(&EarthMoverDistanceTest::testEMDRandomScaleWeights));
     }
 };
 
