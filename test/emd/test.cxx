@@ -484,6 +484,116 @@ public:
             }
         }
     }
+
+    // Test output of emd() on source and target signatures containing only
+    // one entry.
+    void testEMDRandomOneToOne()
+    {
+        const int nTries = 100;
+        const ValueType maxWeight = 1000;
+        const int maxBinIndex = 1000;
+
+        feature_t   sourceFeatures[1] = {0},
+                    targetFeatures[1] = {0};
+        ValueType   sourceWeights[1] = {0},
+                    targetWeights[1] = {0};
+        signature_t sourceSignature = {1, sourceFeatures, sourceWeights},
+                    targetSignature = { 1, targetFeatures, targetWeights};
+
+        ValueType   e;
+        flow_t      flow[1]; // flow size is bounded by sig1->n + sig2->n - 1
+        int         flowSize;
+        int sBinIndex, dBinIndex;
+        ValueType weight;
+
+        for (int i=0; i < nTries; ++i)
+        {
+            sBinIndex = random.uniformInt(maxWeight);
+            dBinIndex = random.uniformInt(maxWeight);
+            weight = random.uniform(0., maxWeight);
+
+            sourceSignature.Features[0] = sBinIndex;
+            targetSignature.Features[0] = dBinIndex;
+            sourceSignature.Weights[0] = weight;
+            targetSignature.Weights[0] = weight;
+
+            e = emd(&sourceSignature, &targetSignature,
+                    dist_l1, flow, &flowSize);
+            shouldMsg(flowSize == 1,
+                    "Flow between single entry signatures should have 1 element.");
+            shouldEqualToleranceMessage(e, dist_l1(&sBinIndex, &dBinIndex),
+                    errorTolerance, "EMD between single entry signatures not in expected tolerance.");
+        }
+    }
+
+    // Test output of emd() with source or target signature with single entry.
+    void testEMDRandomOneMany()
+    {
+        // max bin sizes
+        int binBounds[] = {10, 15, 20, 50, 100};
+        const int nTriesPerSize = 100;
+        const ValueType maxWeight = 1000;
+        const int maxBinIndex = 1000;
+
+        feature_t   singleFeatures[1] = {0};
+        ValueType   singleWeights[1] = {0};
+        signature_t singleSignature = {1, singleFeatures, singleWeights};
+
+        signature_t *manySig;
+
+        ValueType   e;
+        flow_t      *flow;
+        int         flowSize;
+        int sBinIndex, dBinIndex;
+        ValueType weight;
+        ValueType expected;
+
+        int lenBinBounds = sizeof(binBounds)/sizeof(int);
+        for (int i=0; i < lenBinBounds; ++i)
+        {
+            int cBound = binBounds[i];
+            for (int j=0; j < nTriesPerSize; ++j)
+            {
+                sBinIndex = random.uniformInt(maxWeight);
+                weight = random.uniform(0., maxWeight);
+                singleSignature.Features[0] = sBinIndex;
+                singleSignature.Weights[0] = weight;
+
+                manySig = new signature_t;
+                generateRandomSignature(manySig, weight, cBound);
+                flow = new flow_t[cBound];
+
+                e = emd(&singleSignature, manySig, dist_l1, flow, &flowSize);
+                shouldMsg(flowSize == manySig->n,
+                        "Flow should have one arrow for each bin in the target signature.");
+                checkFlowProperties(&singleSignature, manySig, flow,
+                        flowSize);
+
+                // calculate expected value
+                expected = 0;
+                for(int k=0; k < manySig->n; ++k)
+                {
+                    expected += dist_l1(manySig->Features + k,
+                            singleSignature.Features) * manySig->Weights[k];
+                }
+                expected /= weight;
+
+                shouldEqualToleranceMessage(e, expected, errorTolerance,
+                        "emd not equal to expected value.");
+
+                e = emd(manySig, &singleSignature, dist_l1, flow, &flowSize);
+                shouldMsg(flowSize == manySig->n,
+                        "Flow should have one arrow for each bin in the source signature.");
+                checkFlowProperties(manySig, &singleSignature, flow,
+                        flowSize);
+                shouldEqualToleranceMessage(e, expected, errorTolerance,
+                        "emd not equal to expected value.");
+
+                freeSignature(manySig);
+                delete [] flow;
+            }
+        }
+    }
 };
 
 
@@ -497,6 +607,8 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
         add(testCase(&EarthMoverDistanceTest::testEMDEmptyInOut));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomToSelf));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomSymmetric));
+        add(testCase(&EarthMoverDistanceTest::testEMDRandomOneToOne));
+        add(testCase(&EarthMoverDistanceTest::testEMDRandomOneMany));
     }
 };
 
