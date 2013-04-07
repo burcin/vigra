@@ -198,6 +198,33 @@ public:
         delete sig;
     }
 
+    // Check if a is the reverse of b
+    bool isReverseFlow(flow_t *a, flow_t *b, int flowSize)
+    {
+        for (int i=0; i < flowSize; ++i)
+        {
+            // search for an arrow in the reverse direction
+            int j = 0;
+            while (j < flowSize &&
+                    a[i].from != b[j].to && a[i].to != b[j].from)
+                ++j;
+
+            if(j >= flowSize) // if not found
+            {
+                shouldMsg(false, "No arrow in the reverse direction found.");
+            }
+            else
+            {
+                shouldEqualToleranceMessage(a[i].amount, b[j].amount,
+                        errorTolerance,
+                        "Reverse arrow has different weight.");
+            }
+            // There is no need to check if the arrow in b was already
+            // a match for one in a, since the flow contains no duplicate
+            // arrows and this is verified by checkFlowProperties().
+        }
+    }
+
     /*******************************************************************/
     // distance functions
     //
@@ -434,6 +461,8 @@ public:
     //
     // If s1 and s2 are signatures with equal total weight, then
     // emd(s1, s2) == emd(s2, s1) since emd() is a metric.
+    // Since optimal flows are unique in this case, the flow returned by
+    // emd(s1, s2) should the reverse of emd(s2, s1).
     void testEMDRandomSymmetric()
     {
         // max bin sizes
@@ -474,6 +503,8 @@ public:
                             "emd(s1, s2) != emd(s2, s1)");
                     shouldMsg(oFlowSize == rFlowSize,
                             "Flows from emd(s1, s2) and emd(s2, s1) should have the same size.");
+
+                    isReverseFlow(oFlow, rFlow, oFlowSize);
 
                     // free stuff
                     freeSignature(sSig);
