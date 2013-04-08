@@ -32,53 +32,6 @@
 */
 
 
-#define MAX_SIG_SIZE1  (MAX_SIG_SIZE+1)  /* FOR THE POSIBLE DUMMY FEATURE */
-
-/* NEW TYPES DEFINITION */
-
-/* node1_t IS USED FOR SINGLE-LINKED LISTS */
-typedef struct node1_t {
-  int i;
-  double val;
-  struct node1_t *Next;
-} node1_t;
-
-/* node1_t IS USED FOR DOUBLE-LINKED LISTS */
-typedef struct node2_t {
-  int i, j;
-  double val;
-  struct node2_t *NextC;               /* NEXT COLUMN */
-  struct node2_t *NextR;               /* NEXT ROW */
-} node2_t;
-
-
-
-/* GLOBAL VARIABLE DECLARATION */
-static int _n1, _n2;                          /* SIGNATURES SIZES */
-static float _C[MAX_SIG_SIZE1][MAX_SIG_SIZE1];/* THE COST MATRIX */
-static node2_t _X[MAX_SIG_SIZE1*2];            /* THE BASIC VARIABLES VECTOR */
-/* VARIABLES TO HANDLE _X EFFICIENTLY */
-static node2_t *_EndX, *_EnterX;
-static char _IsX[MAX_SIG_SIZE1][MAX_SIG_SIZE1];
-static node2_t *_RowsX[MAX_SIG_SIZE1], *_ColsX[MAX_SIG_SIZE1];
-static double _maxW;
-static float _maxC;
-
-/* DECLARATION OF FUNCTIONS */
-static float init(signature_t *Signature1, signature_t *Signature2,
-		  float (*Dist)(feature_t *, feature_t *));
-static void findBasicVariables(node1_t *U, node1_t *V);
-static int isOptimal(node1_t *U, node1_t *V);
-static int findLoop(node2_t **Loop);
-static void newSol();
-static void russel(double *S, double *D);
-static void addBasicVariable(int minI, int minJ, double *S, double *D, 
-			     node1_t *PrevUMinI, node1_t *PrevVMinJ,
-			     node1_t *UHead);
-#if DEBUG_LEVEL > 0
-static void printSolution();
-#endif
-
 
 /******************************************************************************
 float emd(signature_t *Signature1, signature_t *Signature2,
@@ -101,6 +54,14 @@ where
 ******************************************************************************/
 
 float emd(signature_t *Signature1, signature_t *Signature2,
+	  float (*Dist)(feature_t *, feature_t *),
+	  flow_t *Flow, int *FlowSize)
+{
+    return EMDComputerRubner()(Signature1, Signature2, Dist, Flow, FlowSize);
+}
+
+float EMDComputerRubner::operator()(signature_t *Signature1,
+        signature_t *Signature2,
 	  float (*Dist)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize)
 {
@@ -193,7 +154,7 @@ float emd(signature_t *Signature1, signature_t *Signature2,
 /**********************
    init
 **********************/
-static float init(signature_t *Signature1, signature_t *Signature2, 
+float EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
 		  float (*Dist)(feature_t *, feature_t *))
 {
   int i, j;
@@ -274,7 +235,7 @@ static float init(signature_t *Signature1, signature_t *Signature2,
 /**********************
     findBasicVariables
  **********************/
-static void findBasicVariables(node1_t *U, node1_t *V)
+void EMDComputerRubner::findBasicVariables(node1_t *U, node1_t *V)
 {
   int i, j, found;
   int UfoundNum, VfoundNum;
@@ -411,7 +372,7 @@ static void findBasicVariables(node1_t *U, node1_t *V)
 /**********************
     isOptimal
  **********************/
-static int isOptimal(node1_t *U, node1_t *V)
+int EMDComputerRubner::isOptimal(node1_t *U, node1_t *V)
 {    
   double delta, deltaMin;
   int i, j, minI, minJ;
@@ -455,7 +416,7 @@ static int isOptimal(node1_t *U, node1_t *V)
 /**********************
     newSol
 **********************/
-static void newSol()
+void EMDComputerRubner::newSol()
 {
     int i, j, k;
     double xMin;
@@ -533,7 +494,7 @@ static void newSol()
 /**********************
     findLoop
 **********************/
-static int findLoop(node2_t **Loop)
+int EMDComputerRubner::findLoop(node2_t **Loop)
 {
   int i, steps;
   node2_t **CurX, *NewX;
@@ -626,7 +587,7 @@ static int findLoop(node2_t **Loop)
 /**********************
     russel
 **********************/
-static void russel(double *S, double *D)
+void EMDComputerRubner::russel(double *S, double *D)
 {
   int i, j, found, minI, minJ;
   double deltaMin, oldVal, diff;
@@ -787,7 +748,8 @@ static void russel(double *S, double *D)
 /**********************
     addBasicVariable
 **********************/
-static void addBasicVariable(int minI, int minJ, double *S, double *D, 
+void EMDComputerRubner::addBasicVariable(int minI, int minJ,
+        double *S, double *D,
 			     node1_t *PrevUMinI, node1_t *PrevVMinJ,
 			     node1_t *UHead)
 {
@@ -838,7 +800,7 @@ static void addBasicVariable(int minI, int minJ, double *S, double *D,
 /**********************
     printSolution
 **********************/
-static void printSolution()
+void EMDComputerRubner::printSolution()
 {
   node2_t *P;
   double totalCost;

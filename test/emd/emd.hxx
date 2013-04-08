@@ -49,4 +49,59 @@ float emd(signature_t *Signature1, signature_t *Signature2,
 	  float (*func)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize);
 
+
+
+#define MAX_SIG_SIZE1  (MAX_SIG_SIZE+1)  /* FOR THE POSIBLE DUMMY FEATURE */
+
+class EMDComputerRubner {
+public:
+
+    float operator()(signature_t *Signature1, signature_t *Signature2,
+            float (*func)(feature_t *, feature_t *),
+            flow_t *Flow, int *FlowSize);
+
+protected:
+    /* NEW TYPES DEFINITION */
+
+    /* node1_t IS USED FOR SINGLE-LINKED LISTS */
+    typedef struct node1_t {
+        int i;
+        double val;
+        struct node1_t *Next;
+    } node1_t;
+
+    /* node1_t IS USED FOR DOUBLE-LINKED LISTS */
+    typedef struct node2_t {
+        int i, j;
+        double val;
+        struct node2_t *NextC;               /* NEXT COLUMN */
+        struct node2_t *NextR;               /* NEXT ROW */
+    } node2_t;
+
+    /* DECLARATION OF FUNCTIONS */
+    float init(signature_t *Signature1, signature_t *Signature2,
+            float (*Dist)(feature_t *, feature_t *));
+    void findBasicVariables(node1_t *U, node1_t *V);
+    int isOptimal(node1_t *U, node1_t *V);
+    int findLoop(node2_t **Loop);
+    void newSol();
+    void russel(double *S, double *D);
+    void addBasicVariable(int minI, int minJ, double *S, double *D,
+            node1_t *PrevUMinI, node1_t *PrevVMinJ,
+            node1_t *UHead);
+    void printSolution();
+
+    /* GLOBAL VARIABLE DECLARATION */
+    int _n1, _n2;                          /* SIGNATURES SIZES */
+    float _C[MAX_SIG_SIZE1][MAX_SIG_SIZE1];/* THE COST MATRIX */
+    node2_t _X[MAX_SIG_SIZE1*2];            /* THE BASIC VARIABLES VECTOR */
+    /* VARIABLES TO HANDLE _X EFFICIENTLY */
+    node2_t *_EndX, *_EnterX;
+    char _IsX[MAX_SIG_SIZE1][MAX_SIG_SIZE1];
+    node2_t *_RowsX[MAX_SIG_SIZE1], *_ColsX[MAX_SIG_SIZE1];
+    double _maxW;
+    float _maxC;
+
+};
+
 #endif
