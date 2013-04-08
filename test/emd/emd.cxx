@@ -15,7 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <cmath>
 
 #include "emd.hxx"
 
@@ -396,7 +396,7 @@ int EMDComputerRubner::isOptimal(node1_t *U, node1_t *V)
   printf("deltaMin=%f\n", deltaMin);
 #endif
 
-   if (deltaMin == INFINITY)
+   if (std::isinf(deltaMin))
      {
        vigra_fail("emd: Unexpected error in isOptimal.");
      }
