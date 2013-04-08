@@ -306,14 +306,13 @@ public:
                     nonemptySignature = { 3, nonemptyFeatures,
                         nonemptyWeights};
 
-        ValueType   e;
         flow_t      flow[7]; // flow size is bounded by sig1->n + sig2->n - 1
         int         flowSize;
 
         // Empty signatures
         try
         {
-        e = emd(&emptySignature, &emptySignature, dist_l1, flow, &flowSize);
+        emd(&emptySignature, &emptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -325,7 +324,7 @@ public:
 
         try
         {
-        e = emd(&nonemptySignature, &emptySignature, dist_l1, flow, &flowSize);
+        emd(&nonemptySignature, &emptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -337,7 +336,7 @@ public:
 
         try
         {
-        e = emd(&emptySignature, &nonemptySignature, dist_l1, flow, &flowSize);
+        emd(&emptySignature, &nonemptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -352,7 +351,7 @@ public:
             emptyWeights};
         try
         {
-        e = emd(&bigSignature, &nonemptySignature, dist_l1, NULL, NULL);
+        emd(&bigSignature, &nonemptySignature, dist_l1, NULL, NULL);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -363,7 +362,7 @@ public:
         }
         try
         {
-        e = emd(&nonemptySignature, &bigSignature, dist_l1, NULL, NULL);
+        emd(&nonemptySignature, &bigSignature, dist_l1, NULL, NULL);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -376,7 +375,7 @@ public:
         // Zero filled signatures
         try
         {
-        e = emd(&zeroSignature, &zeroSignature, dist_l1, flow, &flowSize);
+        emd(&zeroSignature, &zeroSignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -387,7 +386,7 @@ public:
         }
         try
         {
-        e = emd(&zeroSignature, &nonemptySignature, dist_l1, flow, &flowSize);
+        emd(&zeroSignature, &nonemptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -398,7 +397,7 @@ public:
         }
         try
         {
-        e = emd(&nonemptySignature, &zeroSignature, dist_l1, flow, &flowSize);
+        emd(&nonemptySignature, &zeroSignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
