@@ -34,8 +34,8 @@
 
 
 /******************************************************************************
-float emd(signature_t *Signature1, signature_t *Signature2,
-	  float (*Dist)(feature_t *, feature_t *), flow_t *Flow, int *FlowSize)
+double emd(signature_t *Signature1, signature_t *Signature2,
+	  double (*Dist)(feature_t *, feature_t *), flow_t *Flow, int *FlowSize)
   
 where
 
@@ -53,21 +53,21 @@ where
               
 ******************************************************************************/
 
-float emd(signature_t *Signature1, signature_t *Signature2,
-	  float (*Dist)(feature_t *, feature_t *),
+double emd(signature_t *Signature1, signature_t *Signature2,
+	  double (*Dist)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize)
 {
     return EMDComputerRubner()(Signature1, Signature2, Dist, Flow, FlowSize);
 }
 
-float EMDComputerRubner::operator()(signature_t *Signature1,
+double EMDComputerRubner::operator()(signature_t *Signature1,
         signature_t *Signature2,
-	  float (*Dist)(feature_t *, feature_t *),
+	  double (*Dist)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize)
 {
   int itr;
   double totalCost;
-  float w;
+  double w;
   node2_t *XP;
   flow_t *FlowP;
   node1_t U[MAX_SIG_SIZE1], V[MAX_SIG_SIZE1];
@@ -144,7 +144,7 @@ float EMDComputerRubner::operator()(signature_t *Signature1,
 #endif
 
   /* RETURN THE NORMALIZED COST == EMD */
-  return (float)(totalCost / w);
+  return (double)(totalCost / w);
 }
 
 
@@ -154,8 +154,8 @@ float EMDComputerRubner::operator()(signature_t *Signature1,
 /**********************
    init
 **********************/
-float EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
-		  float (*Dist)(feature_t *, feature_t *))
+double EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
+		  double (*Dist)(feature_t *, feature_t *))
 {
   int i, j;
   double sSum, dSum, diff;
@@ -622,7 +622,7 @@ void EMDComputerRubner::russel(double *S, double *D)
   for(i=0; i < _n1 ; i++)
     for(j=0; j < _n2 ; j++)
       {
-	float v;
+	double v;
 	v = _C[i][j];
 	if (Ur[i].val <= v)
 	  Ur[i].val = v;

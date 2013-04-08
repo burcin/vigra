@@ -47,10 +47,9 @@ class EarthMoverDistanceTest
     RandomMT19937 random;
 
 public:
-    typedef float ValueType;
-    const ValueType errorTolerance;
+    const double errorTolerance;
 
-    EarthMoverDistanceTest() : errorTolerance(1e-5)
+    EarthMoverDistanceTest() : errorTolerance(1e-6)
     {
         // tests should be deterministic
         random.seed(0);
@@ -84,9 +83,9 @@ public:
     void checkFlowProperties(signature_t *Signature1,
             signature_t *Signature2, flow_t *Flow, int FlowSize)
     {
-        ValueType source_total = 0;
-        ValueType dest_total = 0;
-        ValueType total_flow = 0;
+        double source_total = 0;
+        double dest_total = 0;
+        double total_flow = 0;
         // Following loop
         //  - checks for positive flow,
         //  - computes total flow,
@@ -125,7 +124,7 @@ public:
         // check if source bins are used within their limits
         for (int i=0; i < Signature1->n; ++i)
         {
-            ValueType tot = 0;
+            double tot = 0;
             for (int j=0; j < FlowSize; ++j)
             {
                 if(Flow[j].from == i)
@@ -141,7 +140,7 @@ public:
         // check if target bins are not filled over their capacity
         for (int i=0; i < Signature2->n; ++i)
         {
-            ValueType tot = 0;
+            double tot = 0;
             for (int j=0; j < FlowSize; ++j)
             {
                 if(Flow[j].to == i)
@@ -159,7 +158,7 @@ public:
     // If randomBinCount = 1, number of bins is selected randomly in
     // [1, maxBin]. Otherwise, it is taken to be maxBins.
     void generateRandomSignature(signature_t *signature,
-            ValueType totalWeight, int maxBins, bool randomBinCount=1)
+            double totalWeight, int maxBins, bool randomBinCount=1)
     {
         vigra_precondition(maxBins > 0,
                 "Refusing to generate empty random signature.");
@@ -172,9 +171,9 @@ public:
 
         signature->n = nBins;
         signature->Features = new feature_t[nBins];
-        signature->Weights = new ValueType[nBins];
+        signature->Weights = new double[nBins];
 
-        ValueType currentTotal = 0;
+        double currentTotal = 0;
         for (int i=0; i < nBins; ++i)
         {
             signature->Features[i] = i;
@@ -182,7 +181,7 @@ public:
             currentTotal += signature->Weights[i];
         }
         // normalize - adjust to totalWeight
-        ValueType scaleFactor = currentTotal/totalWeight;
+        double scaleFactor = currentTotal/totalWeight;
         for (int i=0; i < nBins; ++i)
         {
             signature->Weights[i] /= scaleFactor;
@@ -198,7 +197,7 @@ public:
         delete sig;
     }
 
-    void scaleSignature(signature_t* sig, ValueType factor)
+    void scaleSignature(signature_t* sig, double factor)
     {
         for (int i=0; i < sig->n; ++i)
         {
@@ -232,17 +231,17 @@ public:
     // Should be replaced by a functor.
 
     // L1 norm in one dimension
-    static ValueType dist_l1(int* F1, int* F2)
+    static double dist_l1(int* F1, int* F2)
     {
         return std::abs(*F1 - *F2);
     }
 
     // Matrix based distance as defined by the original example2
-    static ValueType dist_example2(int* F1, int* F2)
+    static double dist_example2(int* F1, int* F2)
     {
         // Cost matrix as defined in example2 of original sources
         // http://robotics.stanford.edu/~rubner/emd/default.htm
-        static ValueType _COST[5][3] = {
+        static double _COST[5][3] = {
             {3, 5, 2},
             {0, 2, 5},
             {1, 1, 3},
@@ -261,12 +260,12 @@ public:
     {
         feature_t   f1[5] = { 0, 1, 2, 3, 4 },
                     f2[3] = { 0, 1, 2 };
-        ValueType   w1[5] = { 0.4, 0.2, 0.2, 0.1, 0.1 },
+        double   w1[5] = { 0.4, 0.2, 0.2, 0.1, 0.1 },
                     w2[3] = { 0.6, 0.2, 0.1 };
         signature_t s1 = { 5, f1, w1},
                     s2 = { 3, f2, w2};
 
-        ValueType   e;
+        double   e;
         flow_t      flow[7];
         int         flowSize;
 
@@ -281,12 +280,11 @@ public:
          * 2    0   0.100000
          * 3    1   0.100000
          * 2    1   0.100000
-         * 4    2   0.000000
          * 0    2   0.100000
          */
         e = emd(&s1, &s2, dist_example2, flow, &flowSize);
-        shouldEqualMessage(flowSize, 7, "flow should have 7 items");
-        shouldEqualToleranceMessage(e, 1.888889, errorTolerance,
+        shouldEqualMessage(flowSize, 6, "flow should have 6 items");
+        shouldEqualToleranceMessage(e, 1.88889, errorTolerance,
                 "Earth Moving Distance not within tolerance");
         checkFlowProperties(&s1, &s2, flow, flowSize);
     }
@@ -298,7 +296,7 @@ public:
         feature_t   emptyFeatures[0] = {},
                     zeroFeatures[5] = {0, 1, 2, 3, 4},
                     nonemptyFeatures[3] = { 0, 1, 2 };
-        ValueType   emptyWeights[0] = {},
+        double   emptyWeights[0] = {},
                     zeroWeights[5] = {0, 0, 0, 0, 0},
                     nonemptyWeights[3] = { 1, 5, 8 };
         signature_t emptySignature = { 0, emptyFeatures, emptyWeights},
@@ -417,9 +415,9 @@ public:
         // how many random signatures should be generated for each size
         const int nTriesPerSize = 100;
         // total weight of the signature will be numberOfBins * weightFactor
-        const ValueType weightFactor = 100;
+        const double weightFactor = 100;
 
-        ValueType e;
+        double e;
         flow_t* flow;
         int flowSize;
         signature_t* sig;
@@ -466,9 +464,9 @@ public:
         // how many random signatures should be generated for each size
         const int nTriesPerSize = 10;
         // total weight of the signature will be numberOfBins * weightFactor
-        const ValueType weightFactor = 10;
+        const double weightFactor = 10;
 
-        ValueType e1, e2;
+        double e1, e2;
         flow_t *oFlow, *rFlow;
         int oFlowSize, rFlowSize;
         signature_t *sSig, *dSig;
@@ -515,21 +513,21 @@ public:
     void testEMDRandomOneToOne()
     {
         const int nTries = 100;
-        const ValueType maxWeight = 1000;
+        const double maxWeight = 1000;
         const int maxBinIndex = 1000;
 
         feature_t   sourceFeatures[1] = {0},
                     targetFeatures[1] = {0};
-        ValueType   sourceWeights[1] = {0},
+        double   sourceWeights[1] = {0},
                     targetWeights[1] = {0};
         signature_t sourceSignature = {1, sourceFeatures, sourceWeights},
                     targetSignature = { 1, targetFeatures, targetWeights};
 
-        ValueType   e;
+        double   e;
         flow_t      flow[1]; // flow size is bounded by sig1->n + sig2->n - 1
         int         flowSize;
         int sBinIndex, dBinIndex;
-        ValueType weight;
+        double weight;
 
         for (int i=0; i < nTries; ++i)
         {
@@ -557,21 +555,21 @@ public:
         // max bin sizes
         int binBounds[] = {10, 15, 20, 50, 100};
         const int nTriesPerSize = 100;
-        const ValueType maxWeight = 1000;
+        const double maxWeight = 1000;
         const int maxBinIndex = 1000;
 
         feature_t   singleFeatures[1] = {0};
-        ValueType   singleWeights[1] = {0};
+        double   singleWeights[1] = {0};
         signature_t singleSignature = {1, singleFeatures, singleWeights};
 
         signature_t *manySig;
 
-        ValueType   e;
+        double   e;
         flow_t      *flow;
         int         flowSize;
         int sBinIndex, dBinIndex;
-        ValueType weight;
-        ValueType expected;
+        double weight;
+        double expected;
 
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
         for (int i=0; i < lenBinBounds; ++i)
@@ -627,9 +625,9 @@ public:
         // how many random signatures should be generated for each size
         const int nTriesPerSize = 10;
         // bound for the total weight of the signatures
-        const ValueType maxWeight = 1000;
+        const double maxWeight = 1000;
 
-        ValueType e1, e2, scaleFactor;
+        double e1, e2, scaleFactor;
         flow_t *flow;
         int flowSize;
         signature_t *sSig, *dSig;

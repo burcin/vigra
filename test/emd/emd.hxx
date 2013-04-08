@@ -15,11 +15,12 @@
     E-Mail: rubner@cs.stanford.edu   URL: http://vision.stanford.edu/~rubner
 */
 
+#include <limits>
 
 /* DEFINITIONS */
 #define MAX_SIG_SIZE   100
 #define MAX_ITERATIONS 500
-#define EPSILON        1e-6
+static double EPSILON = std::numeric_limits<double>::epsilon()*10;
 
 /*****************************************************************************/
 /* feature_t SHOULD BE MODIFIED BY THE USER TO REFLECT THE FEATURE TYPE      */
@@ -31,7 +32,7 @@ typedef struct
 {
   int n;                /* Number of features in the signature */
   feature_t *Features;  /* Pointer to the features vector */
-  float *Weights;       /* Pointer to the weights of the features */
+  double *Weights;       /* Pointer to the weights of the features */
 } signature_t;
 
 
@@ -39,13 +40,13 @@ typedef struct
 {
   int from;             /* Feature number in signature 1 */
   int to;               /* Feature number in signature 2 */
-  float amount;         /* Amount of flow from "from" to "to" */
+  double amount;         /* Amount of flow from "from" to "to" */
 } flow_t;
 
 
 
-float emd(signature_t *Signature1, signature_t *Signature2,
-	  float (*func)(feature_t *, feature_t *),
+double emd(signature_t *Signature1, signature_t *Signature2,
+	  double (*func)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize);
 
 
@@ -55,8 +56,8 @@ float emd(signature_t *Signature1, signature_t *Signature2,
 class EMDComputerRubner {
 public:
 
-    float operator()(signature_t *Signature1, signature_t *Signature2,
-            float (*func)(feature_t *, feature_t *),
+    double operator()(signature_t *Signature1, signature_t *Signature2,
+            double (*func)(feature_t *, feature_t *),
             flow_t *Flow, int *FlowSize);
 
 protected:
@@ -78,8 +79,8 @@ protected:
     } node2_t;
 
     /* DECLARATION OF FUNCTIONS */
-    float init(signature_t *Signature1, signature_t *Signature2,
-            float (*Dist)(feature_t *, feature_t *));
+    double init(signature_t *Signature1, signature_t *Signature2,
+            double (*Dist)(feature_t *, feature_t *));
     void findBasicVariables(node1_t *U, node1_t *V);
     int isOptimal(node1_t *U, node1_t *V);
     int findLoop(node2_t **Loop);
@@ -92,14 +93,14 @@ protected:
 
     /* GLOBAL VARIABLE DECLARATION */
     int _n1, _n2;                          /* SIGNATURES SIZES */
-    float _C[MAX_SIG_SIZE1][MAX_SIG_SIZE1];/* THE COST MATRIX */
+    double _C[MAX_SIG_SIZE1][MAX_SIG_SIZE1];/* THE COST MATRIX */
     node2_t _X[MAX_SIG_SIZE1*2];            /* THE BASIC VARIABLES VECTOR */
     /* VARIABLES TO HANDLE _X EFFICIENTLY */
     node2_t *_EndX, *_EnterX;
     char _IsX[MAX_SIG_SIZE1][MAX_SIG_SIZE1];
     node2_t *_RowsX[MAX_SIG_SIZE1], *_ColsX[MAX_SIG_SIZE1];
     double _maxW;
-    float _maxC;
+    double _maxC;
 
 };
 
