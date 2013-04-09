@@ -411,7 +411,8 @@ public:
         }
 
         // Too large signatures
-        signature_t bigSignature = {MAX_SIG_SIZE + 1, emptyFeatures,
+        EMDOptions options = EMDOptions();
+        signature_t bigSignature = {options.maxSigSize + 1, emptyFeatures,
             emptyWeights};
         try
         {

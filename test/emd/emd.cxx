@@ -63,6 +63,23 @@ double emd(signature_t *Signature1, signature_t *Signature2,
 
 namespace vigra {
 
+void EMDComputerRubner::initializeMemory()
+{
+    // use maxSigSize +1 as the size to allow for the dummy bin
+    int maxSizePlusOne = options.maxSigSize + 1;
+    /* THE COST MATRIX */
+    _C = new double*[maxSizePlusOne];
+    for (int i=0; i < maxSizePlusOne; ++i)
+        _C[i] = new double[maxSizePlusOne];
+    /* THE BASIC VARIABLES VECTOR */
+    _X = new node2_t[maxSizePlusOne*2];
+
+    _IsX = new char*[maxSizePlusOne];
+    for (int i=0; i < maxSizePlusOne; ++i)
+        _IsX[i] = new char[maxSizePlusOne];
+    _RowsX = new node2_t*[maxSizePlusOne];
+    _ColsX = new node2_t*[maxSizePlusOne];
+}
 double EMDComputerRubner::operator()(signature_t *Signature1,
         signature_t *Signature2,
 	  double (*Dist)(feature_t *, feature_t *),
@@ -73,14 +90,15 @@ double EMDComputerRubner::operator()(signature_t *Signature1,
   double w;
   node2_t *XP;
   flow_t *FlowP;
-  node1_t U[MAX_SIG_SIZE1], V[MAX_SIG_SIZE1];
+  node1_t U[options.maxSigSize + 1], V[options.maxSigSize + 1];
 
   vigra_precondition(Signature1->n > 0, "Source signature cannot be empty!");
   vigra_precondition(Signature2->n > 0, "Target signature cannot be empty!");
-  if (Signature1->n > MAX_SIG_SIZE || Signature2->n > MAX_SIG_SIZE)
+  if (Signature1->n > options.maxSigSize ||
+          Signature2->n > options.maxSigSize)
     {
         std::ostringstream s;
-        s<<"emd: Signature size is limited to "<<MAX_SIG_SIZE<<std::endl;
+        s<<"emd: Signature size is limited to "<<options.maxSigSize<<std::endl;
         vigra_precondition(false, s.str());
     }
 
@@ -163,7 +181,7 @@ double EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
   int i, j;
   double sSum, dSum, diff;
   feature_t *P1, *P2;
-  double S[MAX_SIG_SIZE1], D[MAX_SIG_SIZE1];
+  double S[options.maxSigSize + 1], D[options.maxSigSize + 1];
  
   _n1 = Signature1->n;
   _n2 = Signature2->n;
@@ -424,7 +442,7 @@ void EMDComputerRubner::newSol()
     int i, j, k;
     double xMin;
     int steps;
-    node2_t *Loop[2*MAX_SIG_SIZE1], *CurX, *LeaveX;
+    node2_t *Loop[2*options.maxSigSize + 1], *CurX, *LeaveX;
  
 #if DEBUG_LEVEL > 3
     printf("EnterX = (%d,%d)\n", _EnterX->i, _EnterX->j);
@@ -501,7 +519,7 @@ int EMDComputerRubner::findLoop(node2_t **Loop)
 {
   int i, steps;
   node2_t **CurX, *NewX;
-  char IsUsed[2*MAX_SIG_SIZE1]; 
+  char IsUsed[2*options.maxSigSize + 1];
  
   for (i=0; i < _n1+_n2; i++)
     IsUsed[i] = 0;
@@ -594,8 +612,8 @@ void EMDComputerRubner::russel(double *S, double *D)
 {
   int i, j, found, minI, minJ;
   double deltaMin, oldVal, diff;
-  double Delta[MAX_SIG_SIZE1][MAX_SIG_SIZE1];
-  node1_t Ur[MAX_SIG_SIZE1], Vr[MAX_SIG_SIZE1];
+  double Delta[options.maxSigSize + 1][options.maxSigSize + 1];
+  node1_t Ur[options.maxSigSize + 1], Vr[options.maxSigSize + 1];
   node1_t uHead, *CurU, *PrevU;
   node1_t vHead, *CurV, *PrevV;
   node1_t *PrevUMinI, *PrevVMinJ, *Remember;

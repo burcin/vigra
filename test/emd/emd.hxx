@@ -20,7 +20,6 @@
 #include <vigra/emd.hxx>
 
 /* DEFINITIONS */
-#define MAX_SIG_SIZE   100
 
 /*****************************************************************************/
 /* feature_t SHOULD BE MODIFIED BY THE USER TO REFLECT THE FEATURE TYPE      */
@@ -53,19 +52,35 @@ double emd(signature_t *Signature1, signature_t *Signature2,
 
 namespace vigra {
 
-#define MAX_SIG_SIZE1  (MAX_SIG_SIZE+1)  /* FOR THE POSIBLE DUMMY FEATURE */
-
 class EMDComputerRubner {
 public:
 
-    EMDComputerRubner() : options(EMDOptions()) {}
+    EMDComputerRubner() : options(EMDOptions())
+    {
+        initializeMemory();
+    }
 
-    EMDComputerRubner(const EMDOptions& options) : options(options) {}
+    EMDComputerRubner(const EMDOptions& options) : options(options)
+    {
+        initializeMemory();
+    }
 
     double operator()(signature_t *Signature1, signature_t *Signature2,
             double (*func)(feature_t *, feature_t *),
             flow_t *Flow, int *FlowSize);
 
+    ~EMDComputerRubner()
+    {
+        for (int i=0; i < options.maxSigSize + 1; ++i)
+            delete [] _C[i];
+        delete [] _C;
+        delete [] _X;
+        for (int i=0; i < options.maxSigSize + 1; ++i)
+            delete [] _IsX[i];
+        delete [] _IsX;
+        delete [] _RowsX;
+        delete [] _ColsX;
+    }
 protected:
     /* NEW TYPES DEFINITION */
 
@@ -97,14 +112,15 @@ protected:
             node1_t *UHead);
     void printSolution();
 
-    /* GLOBAL VARIABLE DECLARATION */
+    void initializeMemory();
     int _n1, _n2;                          /* SIGNATURES SIZES */
-    double _C[MAX_SIG_SIZE1][MAX_SIG_SIZE1];/* THE COST MATRIX */
-    node2_t _X[MAX_SIG_SIZE1*2];            /* THE BASIC VARIABLES VECTOR */
+    double **_C;                           /* THE COST MATRIX */
+    node2_t *_X;                /* THE BASIC VARIABLES VECTOR */
+
     /* VARIABLES TO HANDLE _X EFFICIENTLY */
     node2_t *_EndX, *_EnterX;
-    char _IsX[MAX_SIG_SIZE1][MAX_SIG_SIZE1];
-    node2_t *_RowsX[MAX_SIG_SIZE1], *_ColsX[MAX_SIG_SIZE1];
+    char **_IsX;
+    node2_t **_RowsX, **_ColsX;
     double _maxW;
     double _maxC;
 
