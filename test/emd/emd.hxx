@@ -169,7 +169,7 @@ double EMDComputerRubner<feature_t>::operator()(
   double totalCost;
   double w;
   node2_t *XP;
-  flow_t *FlowP;
+  flow_t *FlowP = NULL;
   node1_t U[options.maxSigSize + 1], V[options.maxSigSize + 1];
 
   vigra_precondition(Signature1->n > 0, "Source signature cannot be empty!");
@@ -498,7 +498,7 @@ template<typename feature_t>
 int EMDComputerRubner<feature_t>::isOptimal(node1_t *U, node1_t *V)
 {
   double delta, deltaMin;
-  int i, j, minI, minJ;
+  int i, j, minI = 0, minJ = 0;
 
   /* FIND THE MINIMAL Cij-Ui-Vj OVER ALL i,j */
   deltaMin = INFINITY;
@@ -545,7 +545,7 @@ void EMDComputerRubner<feature_t>::newSol()
     int i, j, k;
     double xMin;
     int steps;
-    node2_t *Loop[2*options.maxSigSize + 1], *CurX, *LeaveX;
+    node2_t *Loop[2*options.maxSigSize + 1], *CurX, *LeaveX = NULL;
 
 #if EMD_DEBUG_LEVEL > 3
     printf("EnterX = (%d,%d)\n", _EnterX->i, _EnterX->j);
@@ -715,13 +715,13 @@ int EMDComputerRubner<feature_t>::findLoop(node2_t **Loop)
 template<typename feature_t>
 void EMDComputerRubner<feature_t>::russel(double *S, double *D)
 {
-  int i, j, found, minI, minJ;
+  int i, j, found, minI = 0, minJ = 0;
   double deltaMin, oldVal, diff;
   double Delta[options.maxSigSize + 1][options.maxSigSize + 1];
   node1_t Ur[options.maxSigSize + 1], Vr[options.maxSigSize + 1];
   node1_t uHead, *CurU, *PrevU;
   node1_t vHead, *CurV, *PrevV;
-  node1_t *PrevUMinI, *PrevVMinJ, *Remember;
+  node1_t *PrevUMinI = NULL, *PrevVMinJ = NULL, *Remember;
 
   /* INITIALIZE THE ROWS LIST (Ur), AND THE COLUMNS LIST (Vr) */
   uHead.Next = CurU = Ur;
