@@ -36,6 +36,8 @@
 #ifndef VIGRA_EMD_HXX
 #define VIGRA_EMD_HXX
 
+#include <vigra/error.hxx>
+#include <limits>
 
 namespace vigra {
 
@@ -52,11 +54,58 @@ class EMDFlow
     // (used to return the flow between the histograms, see the paper)
 };
 
+/** \brief Set Earth Movers Distance (EMD) options.
+
+  EMDOptions objects are used to pass options to Earth Movers Distance (EMD)
+  computation functions.
+*/
 class EMDOptions
 {
-    // implement this class
-    // (used to pass options to earthMoverDistance(), 
-    //  look at existing options classes in VIGRA to see how this should work)
+public:
+    /** \brief Maximum size of bins in a signature. */
+    int maxSigSize;
+    /** \brief Maximum number of iterations used in the algorithm. */
+    int maxIterations;
+    /** \brief Error tolerance used when comparing floating point numbers. */
+    double epsilon;
+
+    /** Initialize with default values:
+
+        - maxSigSize = 100
+        - maxIterations = 500
+        - epsilon = as defined by std::numeric_limits<double>::epsilon()
+    */
+    EMDOptions()
+    : maxSigSize(100), maxIterations(500),
+      epsilon(std::numeric_limits<double>::epsilon()*1e1) {}
+
+    /** Set maximum signature size accepted by the algorithm.
+    */
+    EMDOptions & setMaxSigSize(int newSize)
+    {
+        vigra_precondition(newSize > 0,
+                "Maximum signature size must be positive");
+        maxSigSize = newSize;
+        return *this;
+    }
+
+    /** Set maximum number of iterations.
+    */
+    EMDOptions & setMaxIterations(int newSize)
+    {
+        vigra_precondition(newSize > 0,
+                "Maximum number of iterations must be positive");
+        maxIterations = newSize;
+        return *this;
+    }
+
+    /** Set error tolerance used to compare floating point numbers.
+    */
+    EMDOptions & setEpsilon(double newEpsilon)
+    {
+        epsilon = newEpsilon;
+        return *this;
+    }
 };
 
 // implement suitable ground distance functors for the most common feature types

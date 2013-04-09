@@ -216,6 +216,7 @@ public:
 
     void printSignature(signature_t *sig)
     {
+        std::cout.precision(15);
         std::cout<<"signature:"<<std::endl;
         for (int i=0; i < sig->n; ++i)
         {
@@ -289,6 +290,71 @@ public:
         checkFlowProperties(&s1, &s2, flow, flowSize);
     }
 
+    void testEMDEpsilon()
+    {
+        feature_t   sourceFeatures[1] = {482},
+                    targetFeatures[94];
+        for (int i=0; i < 94; ++i)
+            targetFeatures[i] = i;
+        double sourceWeights[1] = {883.796822951128},
+               targetWeights[94] = {2.51323772263489, 10.1437428111339,
+                   12.2601341055487, 4.92835956990509, 6.0069893043799,
+                   12.1400001931411, 14.8478551315396, 10.3666762361407,
+                   2.40344903151515, 13.4098880314272, 9.49754202045642,
+                   6.62167720122611, 18.3624799356215, 10.2093360351609,
+                   13.5676855017886, 15.1861955670949, 2.37642144026657,
+                   15.1583532879013, 12.3073085410011, 13.3548176060718,
+                   12.553736067709, 10.1330857345309, 15.440411475033,
+                   12.5885970070129, 5.54827417123641, 1.62448264269099,
+                   2.74523794672398, 8.81266169758666, 15.8318190070725,
+                   16.0829133840968, 6.82208084939348, 11.3564722684034,
+                   8.21353797301209, 17.6075360794372, 17.9467924816885,
+                   4.9021987817979, 8.57284119451089, 1.80064552828248,
+                   1.52601175622286, 11.716381634346, 12.3598628441529,
+                   1.70012775663702, 13.4022904664341, 14.6243217570538,
+                   8.73716323408799, 4.80055461490972, 13.1449366107076,
+                   10.0735510120077, 7.40597827325194, 15.1710807931603,
+                   16.8402430026618, 14.7346395364838, 14.4085701813759,
+                   9.27371237602036, 5.22251962308536, 18.2463196600088,
+                   8.82826515107264, 9.30471594186857, 13.5036488160148,
+                   5.21282577862715, 9.98796859540222, 5.65484192032304,
+                   9.72180414135422, 13.9045884486405, 15.7537370560249,
+                   8.17300203666348, 12.2042053271059, 7.8304828034458,
+                   17.5848735266079, 0.383057233103421, 5.07810212752952,
+                   5.70807341628602, 1.86479732373033, 16.0873930402498,
+                   3.47750065212404, 15.0238805089369, 3.54938724213822,
+                   13.9582167096831, 10.3623763166845, 0.43245327089761,
+                   9.57186199092982, 0.504662887189582, 11.1069465191737,
+                   5.82375377149663, 3.75934330410765, 8.87129988287845,
+                   4.47410674004744, 17.0102896033561, 1.06496512650127,
+                   7.19178601333074, 0.473460690654718, 5.39482381612472,
+                   6.64620145201165, 10.6793850720285};
+        signature_t sourceSignature = {1, sourceFeatures, sourceWeights},
+                    targetSignature = {94, targetFeatures, targetWeights};
+
+        flow_t flow[94];
+        int flowSize;
+
+        EMDOptions options = EMDOptions();
+        options.setEpsilon(0);
+
+        bool raised = false;
+        try
+        {
+        emd(&sourceSignature, &targetSignature, dist_l1, flow, &flowSize,
+                options);
+        }
+        catch(std::runtime_error &c)
+        {
+            raised = true;
+            std::string expected("\nemd: Unexpected error in findBasicVariables!\nThis typically happens when epsilon defined in\nEMDOptions not right for the scale of the problem.");
+            std::string message(c.what());
+            shouldMsg(0 == message.compare(0, expected.length(), expected),
+                    "No error raised for empty source signature");
+        }
+        if (!raised)
+            shouldMsg(false, "epsilon=0 should not produce a valid flow for this example.");
+    }
     // Test if emd() behaves properly for empty and too large source or
     // target signatures.
     void testEMDEmptyInOut()
@@ -682,6 +748,7 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
         : vigra::test_suite("HistogramDistanceTestSuite")
     {
         add(testCase(&EarthMoverDistanceTest::testEMD_RTG_example2));
+        add(testCase(&EarthMoverDistanceTest::testEMDEpsilon));
         add(testCase(&EarthMoverDistanceTest::testEMDEmptyInOut));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomToSelf));
         add(testCase(&EarthMoverDistanceTest::testEMDRandomSymmetric));

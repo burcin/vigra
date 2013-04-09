@@ -55,10 +55,13 @@ where
 
 double emd(signature_t *Signature1, signature_t *Signature2,
 	  double (*Dist)(feature_t *, feature_t *),
-	  flow_t *Flow, int *FlowSize)
+	  flow_t *Flow, int *FlowSize,
+      const vigra::EMDOptions& options)
 {
-    return EMDComputerRubner()(Signature1, Signature2, Dist, Flow, FlowSize);
+    return vigra::EMDComputerRubner(options)(Signature1, Signature2, Dist, Flow, FlowSize);
 }
+
+namespace vigra {
 
 double EMDComputerRubner::operator()(signature_t *Signature1,
         signature_t *Signature2,
@@ -195,7 +198,7 @@ double EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
 
   /* IF SUPPLY DIFFERENT THAN THE DEMAND, ADD A ZERO-COST DUMMY CLUSTER */
   diff = sSum - dSum;
-  if (fabs(diff) >= EPSILON * sSum)
+  if (fabs(diff) >= options.epsilon * sSum)
     {
       if (diff < 0.0)
 	{
@@ -360,8 +363,8 @@ void EMDComputerRubner::findBasicVariables(node1_t *U, node1_t *V)
      if (! found)
      {
          vigra_fail("emd: Unexpected error in findBasicVariables!\n"
-                 "This typically happens when the EPSILON defined in\n"
-                 "emd.h is not right for the scale of the problem.");
+                 "This typically happens when epsilon defined in\n"
+                 "EMDOptions not right for the scale of the problem.");
      }
     }
 }
@@ -405,10 +408,10 @@ int EMDComputerRubner::isOptimal(node1_t *U, node1_t *V)
    _EnterX->j = minJ;
    
    /* IF NO NEGATIVE deltaMin, WE FOUND THE OPTIMAL SOLUTION */
-   return deltaMin >= -EPSILON * _maxC;
+   return deltaMin >= -options.epsilon * _maxC;
 
 /*
-   return deltaMin >= -EPSILON;
+   return deltaMin >= -options.epsilon;
  */
 }
 
@@ -706,7 +709,7 @@ void EMDComputerRubner::russel(double *S, double *D)
 		  
 		  /* IF NEEDED, ADJUST THE RELEVANT Delta[*][j] */
 		  diff = oldVal - CurV->val;
-		  if (fabs(diff) < EPSILON * _maxC)
+		  if (fabs(diff) < options.epsilon * _maxC)
 		    for (CurU=uHead.Next; CurU != NULL; CurU=CurU->Next)
 		      Delta[CurU->i][j] += diff;
 		}
@@ -733,7 +736,7 @@ void EMDComputerRubner::russel(double *S, double *D)
 		  
 		  /* If NEEDED, ADJUST THE RELEVANT Delta[i][*] */
 		  diff = oldVal - CurU->val;
-		  if (fabs(diff) < EPSILON * _maxC)
+		  if (fabs(diff) < options.epsilon * _maxC)
 		    for (CurV=vHead.Next; CurV != NULL; CurV=CurV->Next)
 		      Delta[i][CurV->i] += diff;
 		}
@@ -755,7 +758,7 @@ void EMDComputerRubner::addBasicVariable(int minI, int minJ,
 {
   double T;
   
-  if (fabs(S[minI]-D[minJ]) <= EPSILON * _maxW)  /* DEGENERATE CASE */
+  if (fabs(S[minI]-D[minJ]) <= options.epsilon * _maxW)  /* DEGENERATE CASE */
     {
       T = S[minI];
       S[minI] = 0;
@@ -823,3 +826,4 @@ void EMDComputerRubner::printSolution()
 }
 
 
+} // namespace vigra

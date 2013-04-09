@@ -17,10 +17,11 @@
 
 #include <limits>
 
+#include <vigra/emd.hxx>
+
 /* DEFINITIONS */
 #define MAX_SIG_SIZE   100
 #define MAX_ITERATIONS 500
-static double EPSILON = std::numeric_limits<double>::epsilon()*10;
 
 /*****************************************************************************/
 /* feature_t SHOULD BE MODIFIED BY THE USER TO REFLECT THE FEATURE TYPE      */
@@ -47,14 +48,20 @@ typedef struct
 
 double emd(signature_t *Signature1, signature_t *Signature2,
 	  double (*func)(feature_t *, feature_t *),
-	  flow_t *Flow, int *FlowSize);
+	  flow_t *Flow, int *FlowSize,
+      const vigra::EMDOptions& options = vigra::EMDOptions());
 
 
+namespace vigra {
 
 #define MAX_SIG_SIZE1  (MAX_SIG_SIZE+1)  /* FOR THE POSIBLE DUMMY FEATURE */
 
 class EMDComputerRubner {
 public:
+
+    EMDComputerRubner() : options(EMDOptions()) {}
+
+    EMDComputerRubner(const EMDOptions& options) : options(options) {}
 
     double operator()(signature_t *Signature1, signature_t *Signature2,
             double (*func)(feature_t *, feature_t *),
@@ -102,6 +109,8 @@ protected:
     double _maxW;
     double _maxC;
 
+    const EMDOptions &options;
 };
 
+} // namespace vigra
 #endif
