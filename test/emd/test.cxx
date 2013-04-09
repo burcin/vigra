@@ -46,6 +46,12 @@ class EarthMoverDistanceTest
 {
     RandomMT19937 random;
 
+    // 3d point type used for example1 from original source code
+    // see also testEMD_RTG_example1()
+    struct point3d {
+        int X,Y,Z;
+    };
+
 public:
     const double errorTolerance;
 
@@ -242,6 +248,13 @@ public:
         return std::abs(*F1 - *F2);
     }
 
+    // L2 distance on 3-dimensional space defined by the original example1
+    static double dist_example1(point3d *F1, point3d *F2)
+    {
+        int dX = F1->X - F2->X, dY = F1->Y - F2->Y, dZ = F1->Z - F2->Z;
+        return sqrt(dX*dX + dY*dY + dZ*dZ);
+    }
+
     // Matrix based distance as defined by the original example2
     static double dist_example2(int* F1, int* F2)
     {
@@ -259,6 +272,22 @@ public:
 
     // end distance functions
     /*******************************************************************/
+
+    // example 1 on
+    // http://robotics.stanford.edu/~rubner/emd/default.htm
+    void testEMD_RTG_example1()
+    {
+        point3d f1[4] = { {100,40,22}, {211,20,2}, {32,190,150}, {2,100,100} },
+                f2[3] = { {0,0,0}, {50,100,80}, {255,255,255} };
+        double w1[5] = { 0.4, 0.3, 0.2, 0.1 },
+              w2[3] = { 0.5, 0.3, 0.2 };
+        signature_t<point3d> s1 = { 4, f1, w1}, s2 = { 3, f2, w2};
+        double e;
+
+        e = emd(&s1, &s2, dist_example1, 0, 0);
+        shouldEqualToleranceMessage(e, 160.542770, errorTolerance,
+                "Earth Moving Distance not within tolerance");
+    }
 
     // example 2 on
     // http://robotics.stanford.edu/~rubner/emd/default.htm
@@ -747,6 +776,7 @@ struct HistogramDistanceTestSuite : public vigra::test_suite
     HistogramDistanceTestSuite()
         : vigra::test_suite("HistogramDistanceTestSuite")
     {
+        add(testCase(&EarthMoverDistanceTest::testEMD_RTG_example1));
         add(testCase(&EarthMoverDistanceTest::testEMD_RTG_example2));
         add(testCase(&EarthMoverDistanceTest::testEMDEpsilon));
         add(testCase(&EarthMoverDistanceTest::testEMDEmptyInOut));
