@@ -23,18 +23,13 @@
 
 /* DEFINITIONS */
 
-/*****************************************************************************/
-/* feature_t SHOULD BE MODIFIED BY THE USER TO REFLECT THE FEATURE TYPE      */
-typedef int feature_t;
-/*****************************************************************************/
-
-
-typedef struct
+template<typename feature_t>
+struct signature_t
 {
   int n;                /* Number of features in the signature */
   feature_t *Features;  /* Pointer to the features vector */
   double *Weights;       /* Pointer to the weights of the features */
-} signature_t;
+};
 
 
 typedef struct
@@ -43,7 +38,6 @@ typedef struct
   int to;               /* Feature number in signature 2 */
   double amount;         /* Amount of flow from "from" to "to" */
 } flow_t;
-
 
 
 /******************************************************************************
@@ -65,7 +59,9 @@ where
               Flow will be stored
 
 ******************************************************************************/
-double emd(signature_t *Signature1, signature_t *Signature2,
+template<typename feature_t>
+double emd(signature_t<feature_t> *Signature1,
+        signature_t<feature_t> *Signature2,
 	  double (*func)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize,
       const vigra::EMDOptions& options = vigra::EMDOptions());
@@ -73,6 +69,7 @@ double emd(signature_t *Signature1, signature_t *Signature2,
 
 namespace vigra {
 
+template<typename feature_t>
 class EMDComputerRubner {
 public:
 
@@ -86,7 +83,8 @@ public:
         initializeMemory();
     }
 
-    double operator()(signature_t *Signature1, signature_t *Signature2,
+    double operator()(signature_t<feature_t> *Signature1,
+            signature_t<feature_t> *Signature2,
             double (*func)(feature_t *, feature_t *),
             flow_t *Flow, int *FlowSize);
 
@@ -121,7 +119,8 @@ protected:
     } node2_t;
 
     /* DECLARATION OF FUNCTIONS */
-    double init(signature_t *Signature1, signature_t *Signature2,
+    double init(signature_t<feature_t> *Signature1,
+            signature_t<feature_t> *Signature2,
             double (*Dist)(feature_t *, feature_t *));
     void findBasicVariables(node1_t *U, node1_t *V);
     int isOptimal(node1_t *U, node1_t *V);
@@ -157,8 +156,12 @@ protected:
    3 = PRINT ALSO THE FLOW AFTER EVERY ITERATION
    4 = PRINT A LOT OF INFORMATION (PROBABLY USEFUL ONLY FOR THE AUTHOR)
 */
-double EMDComputerRubner::operator()(signature_t *Signature1,
-        signature_t *Signature2,
+
+
+template<typename feature_t>
+double EMDComputerRubner<feature_t>::operator()(
+        signature_t<feature_t> *Signature1,
+        signature_t<feature_t> *Signature2,
 	  double (*Dist)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize)
 {
@@ -207,8 +210,8 @@ double EMDComputerRubner::operator()(signature_t *Signature1,
 	}
 
       if (itr == options.maxIterations)
-	std::cerr<<"Maximum number of iterations has been reached ("<<
-		options.maxIterations<<")"<<std::endl;
+          std::cerr<<"Maximum number of iterations has been reached ("<<
+              options.maxIterations<<")"<<std::endl;
     }
 
   /* COMPUTE THE TOTAL FLOW */
@@ -252,7 +255,9 @@ double EMDComputerRubner::operator()(signature_t *Signature1,
 /**********************
    init
 **********************/
-double EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
+template<typename feature_t>
+double EMDComputerRubner<feature_t>::init(signature_t<feature_t> *Signature1,
+        signature_t<feature_t> *Signature2,
 		  double (*Dist)(feature_t *, feature_t *))
 {
   int i, j;
@@ -329,7 +334,8 @@ double EMDComputerRubner::init(signature_t *Signature1, signature_t *Signature2,
   return sSum > dSum ? dSum : sSum;
 }
 
-void EMDComputerRubner::initializeMemory()
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::initializeMemory()
 {
     // use maxSigSize +1 as the size to allow for the dummy bin
     int maxSizePlusOne = options.maxSigSize + 1;
@@ -346,10 +352,12 @@ void EMDComputerRubner::initializeMemory()
     _RowsX = new node2_t*[maxSizePlusOne];
     _ColsX = new node2_t*[maxSizePlusOne];
 }
+
 /**********************
     findBasicVariables
  **********************/
-void EMDComputerRubner::findBasicVariables(node1_t *U, node1_t *V)
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::findBasicVariables(node1_t *U, node1_t *V)
 {
   int i, j, found;
   int UfoundNum, VfoundNum;
@@ -486,7 +494,8 @@ void EMDComputerRubner::findBasicVariables(node1_t *U, node1_t *V)
 /**********************
     isOptimal
  **********************/
-int EMDComputerRubner::isOptimal(node1_t *U, node1_t *V)
+template<typename feature_t>
+int EMDComputerRubner<feature_t>::isOptimal(node1_t *U, node1_t *V)
 {
   double delta, deltaMin;
   int i, j, minI, minJ;
@@ -530,7 +539,8 @@ int EMDComputerRubner::isOptimal(node1_t *U, node1_t *V)
 /**********************
     newSol
 **********************/
-void EMDComputerRubner::newSol()
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::newSol()
 {
     int i, j, k;
     double xMin;
@@ -608,7 +618,8 @@ void EMDComputerRubner::newSol()
 /**********************
     findLoop
 **********************/
-int EMDComputerRubner::findLoop(node2_t **Loop)
+template<typename feature_t>
+int EMDComputerRubner<feature_t>::findLoop(node2_t **Loop)
 {
   int i, steps;
   node2_t **CurX, *NewX;
@@ -701,7 +712,8 @@ int EMDComputerRubner::findLoop(node2_t **Loop)
 /**********************
     russel
 **********************/
-void EMDComputerRubner::russel(double *S, double *D)
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::russel(double *S, double *D)
 {
   int i, j, found, minI, minJ;
   double deltaMin, oldVal, diff;
@@ -862,7 +874,8 @@ void EMDComputerRubner::russel(double *S, double *D)
 /**********************
     addBasicVariable
 **********************/
-void EMDComputerRubner::addBasicVariable(int minI, int minJ,
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::addBasicVariable(int minI, int minJ,
         double *S, double *D,
 			     node1_t *PrevUMinI, node1_t *PrevVMinJ,
 			     node1_t *UHead)
@@ -914,7 +927,8 @@ void EMDComputerRubner::addBasicVariable(int minI, int minJ,
 /**********************
     printSolution
 **********************/
-void EMDComputerRubner::printSolution()
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::printSolution()
 {
   node2_t *P;
   double totalCost;
@@ -933,18 +947,18 @@ void EMDComputerRubner::printSolution()
 	totalCost += (double)P->val * _C[P->i][P->j];
       }
 
-  std::cout<<"COST = "<<totalCost<<std::endl;
+  std::cout<<"COST = "<<totalCost<<std::endl;;
 }
-
-
 } // namespace vigra
 
-double emd(signature_t *Signature1, signature_t *Signature2,
+template<typename feature_t>
+double emd(signature_t<feature_t> *Signature1,
+        signature_t<feature_t> *Signature2,
 	  double (*Dist)(feature_t *, feature_t *),
 	  flow_t *Flow, int *FlowSize,
       const vigra::EMDOptions& options)
 {
-    return vigra::EMDComputerRubner(options)(Signature1, Signature2, Dist, Flow, FlowSize);
+    return vigra::EMDComputerRubner<feature_t>(options)(Signature1, Signature2, Dist, Flow, FlowSize);
 }
 
 #endif

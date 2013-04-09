@@ -80,8 +80,9 @@ public:
     // See page 8 of the following text for further explanation:
     //
     // http://www.cs.cmu.edu/~efros/courses/AP06/Papers/rubner-jcviu-00.pdf
-    void checkFlowProperties(signature_t *Signature1,
-            signature_t *Signature2, flow_t *Flow, int FlowSize)
+    template<typename feature_t>
+    void checkFlowProperties(signature_t<feature_t> *Signature1,
+            signature_t<feature_t> *Signature2, flow_t *Flow, int FlowSize)
     {
         double source_total = 0;
         double dest_total = 0;
@@ -157,7 +158,8 @@ public:
     // Generate a random signature with given totalWeight.
     // If randomBinCount = 1, number of bins is selected randomly in
     // [1, maxBin]. Otherwise, it is taken to be maxBins.
-    void generateRandomSignature(signature_t *signature,
+    template<typename feature_t>
+    void generateRandomSignature(signature_t<feature_t> *signature,
             double totalWeight, int maxBins, bool randomBinCount=1)
     {
         vigra_precondition(maxBins > 0,
@@ -190,14 +192,16 @@ public:
 
     // This is used to free signatures allocated by
     // generateRandomSignature()
-    void freeSignature(signature_t *sig)
+    template<typename feature_t>
+    void freeSignature(signature_t<feature_t> *sig)
     {
         delete [] sig->Features;
         delete [] sig->Weights;
         delete sig;
     }
 
-    void scaleSignature(signature_t* sig, double factor)
+    template<typename feature_t>
+    void scaleSignature(signature_t<feature_t>* sig, double factor)
     {
         for (int i=0; i < sig->n; ++i)
         {
@@ -214,7 +218,8 @@ public:
                 std::cout<<flow[i].from<<" "<<flow[i].to<<" "<<flow[i].amount<<std::endl;
     }
 
-    void printSignature(signature_t *sig)
+    template<typename feature_t>
+    void printSignature(signature_t<feature_t>*sig)
     {
         std::cout.precision(15);
         std::cout<<"signature:"<<std::endl;
@@ -259,12 +264,10 @@ public:
     // http://robotics.stanford.edu/~rubner/emd/default.htm
     void testEMD_RTG_example2()
     {
-        feature_t   f1[5] = { 0, 1, 2, 3, 4 },
-                    f2[3] = { 0, 1, 2 };
-        double   w1[5] = { 0.4, 0.2, 0.2, 0.1, 0.1 },
-                    w2[3] = { 0.6, 0.2, 0.1 };
-        signature_t s1 = { 5, f1, w1},
-                    s2 = { 3, f2, w2};
+        int f1[5] = { 0, 1, 2, 3, 4 }, f2[3] = { 0, 1, 2 };
+        double w1[5] = { 0.4, 0.2, 0.2, 0.1, 0.1 },
+               w2[3] = { 0.6, 0.2, 0.1 };
+        signature_t<int> s1 = { 5, f1, w1}, s2 = { 3, f2, w2};
 
         double   e;
         flow_t      flow[7];
@@ -292,8 +295,7 @@ public:
 
     void testEMDEpsilon()
     {
-        feature_t   sourceFeatures[1] = {482},
-                    targetFeatures[94];
+        int sourceFeatures[1] = {482}, targetFeatures[94];
         for (int i=0; i < 94; ++i)
             targetFeatures[i] = i;
         double sourceWeights[1] = {883.796822951128},
@@ -329,7 +331,7 @@ public:
                    4.47410674004744, 17.0102896033561, 1.06496512650127,
                    7.19178601333074, 0.473460690654718, 5.39482381612472,
                    6.64620145201165, 10.6793850720285};
-        signature_t sourceSignature = {1, sourceFeatures, sourceWeights},
+        signature_t<int> sourceSignature = {1, sourceFeatures, sourceWeights},
                     targetSignature = {94, targetFeatures, targetWeights};
 
         flow_t flow[94];
@@ -359,16 +361,15 @@ public:
     // target signatures.
     void testEMDEmptyInOut()
     {
-        feature_t   emptyFeatures[0] = {},
-                    zeroFeatures[5] = {0, 1, 2, 3, 4},
-                    nonemptyFeatures[3] = { 0, 1, 2 };
-        double   emptyWeights[0] = {},
-                    zeroWeights[5] = {0, 0, 0, 0, 0},
-                    nonemptyWeights[3] = { 1, 5, 8 };
-        signature_t emptySignature = { 0, emptyFeatures, emptyWeights},
-                    zeroSignature = { 5, zeroFeatures, zeroWeights},
-                    nonemptySignature = { 3, nonemptyFeatures,
-                        nonemptyWeights};
+        int emptyFeatures[0] = {},
+            zeroFeatures[5] = {0, 1, 2, 3, 4},
+            nonemptyFeatures[3] = { 0, 1, 2 };
+        double emptyWeights[0] = {},
+               zeroWeights[5] = {0, 0, 0, 0, 0},
+               nonemptyWeights[3] = { 1, 5, 8 };
+        signature_t<int> emptySignature = { 0, emptyFeatures, emptyWeights},
+            zeroSignature = { 5, zeroFeatures, zeroWeights},
+            nonemptySignature = { 3, nonemptyFeatures, nonemptyWeights};
 
         flow_t      flow[7]; // flow size is bounded by sig1->n + sig2->n - 1
         int         flowSize;
@@ -412,7 +413,7 @@ public:
 
         // Too large signatures
         EMDOptions options = EMDOptions();
-        signature_t bigSignature = {options.maxSigSize + 1, emptyFeatures,
+        signature_t<int> bigSignature = {options.maxSigSize + 1, emptyFeatures,
             emptyWeights};
         try
         {
@@ -487,7 +488,7 @@ public:
         double e;
         flow_t* flow;
         int flowSize;
-        signature_t* sig;
+        signature_t<int>* sig;
 
         // Mighty compiler gods, make C++11 available, save us from our sins
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
@@ -500,7 +501,7 @@ public:
             int cBound = binBounds[i];
             for (int j=0; j < nTriesPerSize; ++j)
             {
-                sig = new signature_t;
+                sig = new signature_t<int>;
                 // generateRandomSignature allocates memory for sig
                 generateRandomSignature(sig, cBound * weightFactor, cBound);
                 // flow size is bounded by n1 + n2 - 1 where n1 and n2 is the
@@ -536,7 +537,7 @@ public:
         double e1, e2;
         flow_t *oFlow, *rFlow;
         int oFlowSize, rFlowSize;
-        signature_t *sSig, *dSig;
+        signature_t<int> *sSig, *dSig;
 
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
         for (int i=0; i < lenBinBounds; ++i)
@@ -550,8 +551,8 @@ public:
                 rFlow = new flow_t[sBound + dBound  - 1];
                 for (int k=0; k < nTriesPerSize; ++k)
                 {
-                    sSig = new signature_t;
-                    dSig = new signature_t;
+                    sSig = new signature_t<int>;
+                    dSig = new signature_t<int>;
                     // generateRandomSignature allocates memory for sig
                     generateRandomSignature(sSig, sBound*dBound * weightFactor, sBound);
                     generateRandomSignature(dSig, sBound*dBound * weightFactor, dBound);
@@ -583,12 +584,10 @@ public:
         const double maxWeight = 1000;
         const int maxBinIndex = 1000;
 
-        feature_t   sourceFeatures[1] = {0},
-                    targetFeatures[1] = {0};
-        double   sourceWeights[1] = {0},
-                    targetWeights[1] = {0};
-        signature_t sourceSignature = {1, sourceFeatures, sourceWeights},
-                    targetSignature = { 1, targetFeatures, targetWeights};
+        int sourceFeatures[1] = {0}, targetFeatures[1] = {0};
+        double sourceWeights[1] = {0}, targetWeights[1] = {0};
+        signature_t<int> sourceSignature = {1, sourceFeatures, sourceWeights},
+            targetSignature = { 1, targetFeatures, targetWeights};
 
         double   e;
         flow_t      flow[1]; // flow size is bounded by sig1->n + sig2->n - 1
@@ -625,11 +624,11 @@ public:
         const double maxWeight = 1000;
         const int maxBinIndex = 1000;
 
-        feature_t   singleFeatures[1] = {0};
-        double   singleWeights[1] = {0};
-        signature_t singleSignature = {1, singleFeatures, singleWeights};
+        int singleFeatures[1] = {0};
+        double singleWeights[1] = {0};
+        signature_t<int> singleSignature = {1, singleFeatures, singleWeights};
 
-        signature_t *manySig;
+        signature_t<int> *manySig;
 
         double   e;
         flow_t      *flow;
@@ -649,7 +648,7 @@ public:
                 singleSignature.Features[0] = sBinIndex;
                 singleSignature.Weights[0] = weight;
 
-                manySig = new signature_t;
+                manySig = new signature_t<int>;
                 generateRandomSignature(manySig, weight, cBound);
                 flow = new flow_t[cBound];
 
@@ -697,7 +696,7 @@ public:
         double e1, e2, scaleFactor;
         flow_t *flow;
         int flowSize;
-        signature_t *sSig, *dSig;
+        signature_t<int> *sSig, *dSig;
 
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
         for (int i=0; i < lenBinBounds; ++i)
@@ -710,8 +709,8 @@ public:
                 flow = new flow_t[sBound + dBound  - 1];
                 for (int k=0; k < nTriesPerSize; ++k)
                 {
-                    sSig = new signature_t;
-                    dSig = new signature_t;
+                    sSig = new signature_t<int>;
+                    dSig = new signature_t<int>;
 
                     // generateRandomSignature allocates memory for sig
                     generateRandomSignature(sSig,
