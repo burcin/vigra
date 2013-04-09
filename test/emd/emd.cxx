@@ -93,7 +93,7 @@ double EMDComputerRubner::operator()(signature_t *Signature1,
  
   if (_n1 > 1 && _n2 > 1)  /* IF _n1 = 1 OR _n2 = 1 THEN WE ARE DONE */
     {
-      for (itr = 1; itr < MAX_ITERATIONS; itr++)
+      for (itr = 1; itr < options.maxIterations; itr++)
 	{
 	  /* FIND BASIC VARIABLES */
 	  findBasicVariables(U, V);
@@ -111,9 +111,9 @@ double EMDComputerRubner::operator()(signature_t *Signature1,
 #endif
 	}
 
-      if (itr == MAX_ITERATIONS)
+      if (itr == options.maxIterations)
 	fprintf(stderr, "emd: Maximum number of iterations has been reached (%d)\n",
-		MAX_ITERATIONS);
+		options.maxIterations);
     }
 
   /* COMPUTE THE TOTAL FLOW */
