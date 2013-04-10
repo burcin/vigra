@@ -21,41 +21,24 @@
 
 #include <vigra/emd.hxx>
 
-/* DEFINITIONS */
-
-typedef struct
-{
-  int from;             /* Feature number in signature 1 */
-  int to;               /* Feature number in signature 2 */
-  double amount;         /* Amount of flow from "from" to "to" */
-} flow_t;
-
-
 /******************************************************************************
 double emd(const Signature &Signature1, const Signature &Signature2,
-	  double (*Dist)(const feature_t &, const feature_t &),
-      flow_t *Flow, int *FlowSize)
+	  double (*Dist)(const feature_t &, const feature_t &), EMDFlow& Flow)
 
 where
 
-   Signature1, Signature2  Pointers to signatures that their distance we want
-              to compute.
+   Signature1, Signature2  signatures that their distance we want to compute.
    Dist       Pointer to the ground distance. i.e. the function that computes
               the distance between two features.
-   Flow       (Optional) Pointer to a vector of flow_t (defined in emd.h)
-              where the resulting flow will be stored. Flow must have n1+n2-1
-              elements, where n1 and n2 are the sizes of the two signatures
-              respectively.
-              If NULL, the flow is not returned.
-   FlowSize   (Optional) Pointer to an integer where the number of elements in
-              Flow will be stored
+   Flow       (Optional) Instance of EMDFlow (defined in emd.h)
+              where the resulting flow will be stored.
 
 ******************************************************************************/
 template<typename feature_t>
 double emd(const vigra::Signature<feature_t> &Signature1,
         const vigra::Signature<feature_t> &Signature2,
 	  double (*func)(const feature_t&, const feature_t&),
-	  flow_t *Flow, int *FlowSize,
+	  vigra::EMDFlow& flow,
       const vigra::EMDOptions& options = vigra::EMDOptions());
 
 
@@ -78,7 +61,11 @@ public:
     double operator()(const Signature<feature_t> &signature1,
             const Signature<feature_t> &signature2,
             double (*func)(const feature_t&, const feature_t&),
-            flow_t *Flow, int *FlowSize);
+            EMDFlow &Flow);
+
+    double operator()(const Signature<feature_t> &signature1,
+            const Signature<feature_t> &signature2,
+            double (*func)(const feature_t&, const feature_t&));
 
     ~EMDComputerRubner()
     {
@@ -123,6 +110,8 @@ protected:
             node1_t *PrevUMinI, node1_t *PrevVMinJ,
             node1_t *UHead);
     void printSolution();
+    void getFlow(const Signature<feature_t> &s1,
+            const Signature<feature_t> &s2, EMDFlow &Flow);
 
     void initializeMemory();
     int _n1, _n2;                          /* SIGNATURES SIZES */
@@ -149,19 +138,47 @@ protected:
    4 = PRINT A LOT OF INFORMATION (PROBABLY USEFUL ONLY FOR THE AUTHOR)
 */
 
+template<typename feature_t>
+void EMDComputerRubner<feature_t>::getFlow(
+        const Signature<feature_t> &signature1,
+        const Signature<feature_t> &signature2, EMDFlow &Flow)
+{
+    node2_t *XP;
+    for(XP=_X; XP < _EndX; XP++)
+    {
+        if (XP == _EnterX)  /* _EnterX IS THE EMPTY SLOT */
+            continue;
+        if ( (XP->i == signature1.size()) || (XP->j == signature2.size()))  /* DUMMY FEATURE */
+            continue;
+
+        if (XP->val == 0)  /* ZERO FLOW */
+            continue;
+
+        Flow.push_back(XP->i, XP->j, XP->val);
+    }
+}
 
 template<typename feature_t>
 double EMDComputerRubner<feature_t>::operator()(
         const Signature<feature_t> &signature1,
         const Signature<feature_t> &signature2,
-	  double (*Dist)(const feature_t &, const feature_t &),
-	  flow_t *Flow, int *FlowSize)
+	  double (*Dist)(const feature_t &, const feature_t &), EMDFlow &flow)
+{
+    double e = (*this)(signature1, signature2, Dist);
+    getFlow(signature1, signature2, flow);
+    return e;
+}
+
+template<typename feature_t>
+double EMDComputerRubner<feature_t>::operator()(
+        const Signature<feature_t> &signature1,
+        const Signature<feature_t> &signature2,
+	  double (*Dist)(const feature_t &, const feature_t &))
 {
   int itr;
   double totalCost;
   double w;
   node2_t *XP;
-  flow_t *FlowP = NULL;
   node1_t U[options.maxSigSize + 1], V[options.maxSigSize + 1];
 
   vigra_precondition(signature1.size() > 0,
@@ -210,8 +227,6 @@ double EMDComputerRubner<feature_t>::operator()(
 
   /* COMPUTE THE TOTAL FLOW */
   totalCost = 0;
-  if (Flow != NULL)
-    FlowP = Flow;
   for(XP=_X; XP < _EndX; XP++)
     {
       if (XP == _EnterX)  /* _EnterX IS THE EMPTY SLOT */
@@ -223,16 +238,7 @@ double EMDComputerRubner<feature_t>::operator()(
 	continue;
 
       totalCost += (double)XP->val * _C[XP->i][XP->j];
-      if (Flow != NULL)
-	{
-	  FlowP->from = XP->i;
-	  FlowP->to = XP->j;
-	  FlowP->amount = XP->val;
-	  FlowP++;
-	}
     }
-  if (Flow != NULL)
-    *FlowSize = FlowP-Flow;
 
 #if EMD_DEBUG_LEVEL > 0
   printf("\n*** OPTIMAL SOLUTION (%d ITERATIONS): %f ***\n", itr, totalCost);
@@ -955,10 +961,19 @@ template<typename feature_t>
 double emd(const vigra::Signature<feature_t> &Signature1,
         const vigra::Signature<feature_t> &Signature2,
 	  double (*Dist)(const feature_t&, const feature_t&),
-	  flow_t *Flow, int *FlowSize,
-      const vigra::EMDOptions& options)
+	  const vigra::EMDOptions& options = vigra::EMDOptions())
 {
-    return vigra::EMDComputerRubner<feature_t>(options)(Signature1, Signature2, Dist, Flow, FlowSize);
+    return vigra::EMDComputerRubner<feature_t>(options)(Signature1, Signature2, Dist);
+}
+
+
+template<typename feature_t>
+double emd(const vigra::Signature<feature_t> &Signature1,
+        const vigra::Signature<feature_t> &Signature2,
+	  double (*Dist)(const feature_t&, const feature_t&),
+	  vigra::EMDFlow &Flow, const vigra::EMDOptions& options)
+{
+    return vigra::EMDComputerRubner<feature_t>(options)(Signature1, Signature2, Dist, Flow);
 }
 
 #endif

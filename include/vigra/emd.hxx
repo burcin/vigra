@@ -143,9 +143,62 @@ void Signature<int>::randomize(double totalWeight, int maxBins,
 
 class EMDFlow
 {
-    // implement this class
-    // (used to return the flow between the histograms, see the paper)
+public:
+    class ArrowType
+    {
+    public:
+        /* Feature number in signature 1 */
+        int from;
+        /* Feature number in signature 2 */
+        int to;
+        /* Amount of flow from "from" to "to" */
+        double amount;
+
+        ArrowType(int f, int t, double a) : from(f), to(t), amount(a) {};
+    };
+
+    /** Insert a new flow item.
+    */
+    void push_back(int from, int to, double amount)
+    {
+        data_.push_back(ArrowType(from, to, amount));
+    }
+
+    /** Returns the number of flow items stored.
+    */
+    int size() const
+    {
+        return data_.size();
+    }
+
+    /** Readonly access to the flow item with index i.
+    */
+    const ArrowType& operator[](size_t i) const
+    {
+        return data_[i];
+    }
+
+    /** Clear the contents of this flow.
+    */
+    void clear()
+    {
+        data_.clear();
+    }
+
+protected:
+
+    ArrayVector<ArrowType> data_;
 };
+
+std::ostream &operator<<(std::ostream &out, const EMDFlow &flow)
+{
+    out<<"flow: "<<std::endl;
+    out<<"from\tto\tamount"<<std::endl;
+    for (int i=0; i < flow.size(); i++)
+        if (flow[i].amount > 0)
+            out<<flow[i].from<<" "<<flow[i].to<<" "<<flow[i].amount<<std::endl;
+    return out;
+}
 
 /** \brief Set Earth Movers Distance (EMD) options.
 
