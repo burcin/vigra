@@ -87,8 +87,9 @@ public:
     //
     // http://www.cs.cmu.edu/~efros/courses/AP06/Papers/rubner-jcviu-00.pdf
     template<typename feature_t>
-    void checkFlowProperties(signature_t<feature_t> *Signature1,
-            signature_t<feature_t> *Signature2, flow_t *Flow, int FlowSize)
+    void checkFlowProperties(const Signature<feature_t> &signature1,
+            const Signature<feature_t> &signature2,
+            flow_t *Flow, int FlowSize)
     {
         double source_total = 0;
         double dest_total = 0;
@@ -103,9 +104,9 @@ public:
             shouldMsg(Flow[i].amount >= 0, "flow in the wrong direction");
             total_flow += Flow[i].amount;
 
-            shouldMsg(Flow[i].from >=0 && Flow[i].from < Signature1->n,
+            shouldMsg(Flow[i].from >=0 && Flow[i].from < signature1.size(),
                     "Flow origin label not found in Signature");
-            shouldMsg(Flow[i].to >=0 && Flow[i].to < Signature2->n,
+            shouldMsg(Flow[i].to >=0 && Flow[i].to < signature2.size(),
                     "Flow destination label not found in Signature");
             for (int j=i+1; j < FlowSize; ++j)
             {
@@ -116,20 +117,20 @@ public:
         }
 
         // compute total initial and target weights
-        for (int i=0; i < Signature1->n; ++i)
+        for (int i=0; i < signature1.size(); ++i)
         {
-            source_total += Signature1->Weights[i];
+            source_total += signature1.weights_[i];
         }
-        for (int i=0; i < Signature2->n; ++i)
+        for (int i=0; i < signature2.size(); ++i)
         {
-            dest_total += Signature2->Weights[i];
+            dest_total += signature2.weights_[i];
         }
         shouldEqualToleranceMessage(std::min(source_total, dest_total),
                 total_flow, errorTolerance,
                 "total flow more than minimum of total initial or target");
 
         // check if source bins are used within their limits
-        for (int i=0; i < Signature1->n; ++i)
+        for (int i=0; i < signature1.size(); ++i)
         {
             double tot = 0;
             for (int j=0; j < FlowSize; ++j)
@@ -140,12 +141,12 @@ public:
             // FIXME: floats are notoriously error prone
             // the scaling factor below should at least be computed based
             // on precision and size of source/target signatures
-            shouldMsg(tot <= Signature1->Weights[i] + errorTolerance*1e4,
+            shouldMsg(tot <= signature1.weights_[i] + errorTolerance*1e4,
                     "flow uses more earth than available in bin");
         }
 
         // check if target bins are not filled over their capacity
-        for (int i=0; i < Signature2->n; ++i)
+        for (int i=0; i < signature2.size(); ++i)
         {
             double tot = 0;
             for (int j=0; j < FlowSize; ++j)
@@ -156,62 +157,8 @@ public:
             // FIXME: floats are notoriously error prone
             // the scaling factor below should at least be computed based
             // on precision and size of source/target signatures
-            shouldMsg(tot <= Signature2->Weights[i] + errorTolerance*1e4,
+            shouldMsg(tot <= signature2.weights_[i] + errorTolerance*1e4,
                     "overflow in target bin");
-        }
-    }
-
-    // Generate a random signature with given totalWeight.
-    // If randomBinCount = 1, number of bins is selected randomly in
-    // [1, maxBin]. Otherwise, it is taken to be maxBins.
-    template<typename feature_t>
-    void generateRandomSignature(signature_t<feature_t> *signature,
-            double totalWeight, int maxBins, bool randomBinCount=1)
-    {
-        vigra_precondition(maxBins > 0,
-                "Refusing to generate empty random signature.");
-        int nBins;
-
-        if (!randomBinCount)
-            nBins = maxBins;
-        else
-            nBins = random.uniformInt(maxBins) + 1; // avoid 0
-
-        signature->n = nBins;
-        signature->Features = new feature_t[nBins];
-        signature->Weights = new double[nBins];
-
-        double currentTotal = 0;
-        for (int i=0; i < nBins; ++i)
-        {
-            signature->Features[i] = i;
-            signature->Weights[i] = random.uniform(0, totalWeight*maxBins);
-            currentTotal += signature->Weights[i];
-        }
-        // normalize - adjust to totalWeight
-        double scaleFactor = currentTotal/totalWeight;
-        for (int i=0; i < nBins; ++i)
-        {
-            signature->Weights[i] /= scaleFactor;
-        }
-    }
-
-    // This is used to free signatures allocated by
-    // generateRandomSignature()
-    template<typename feature_t>
-    void freeSignature(signature_t<feature_t> *sig)
-    {
-        delete [] sig->Features;
-        delete [] sig->Weights;
-        delete sig;
-    }
-
-    template<typename feature_t>
-    void scaleSignature(signature_t<feature_t>* sig, double factor)
-    {
-        for (int i=0; i < sig->n; ++i)
-        {
-            sig->Weights[i] *= factor;
         }
     }
 
@@ -224,17 +171,6 @@ public:
                 std::cout<<flow[i].from<<" "<<flow[i].to<<" "<<flow[i].amount<<std::endl;
     }
 
-    template<typename feature_t>
-    void printSignature(signature_t<feature_t>*sig)
-    {
-        std::cout.precision(15);
-        std::cout<<"signature:"<<std::endl;
-        for (int i=0; i < sig->n; ++i)
-        {
-            std::cout<<"label: "<<sig->Features[i]<<" weight: "<<sig->Weights[i]<<std::endl;
-        }
-    }
-
     /*******************************************************************/
     // distance functions
     //
@@ -243,20 +179,20 @@ public:
     // Should be replaced by a functor.
 
     // L1 norm in one dimension
-    static double dist_l1(int* F1, int* F2)
+    static double dist_l1(const int &F1, const int &F2)
     {
-        return std::abs(*F1 - *F2);
+        return std::abs(F1 - F2);
     }
 
     // L2 distance on 3-dimensional space defined by the original example1
-    static double dist_example1(point3d *F1, point3d *F2)
+    static double dist_example1(const point3d& F1, const point3d& F2)
     {
-        int dX = F1->X - F2->X, dY = F1->Y - F2->Y, dZ = F1->Z - F2->Z;
+        int dX = F1.X - F2.X, dY = F1.Y - F2.Y, dZ = F1.Z - F2.Z;
         return sqrt(dX*dX + dY*dY + dZ*dZ);
     }
 
     // Matrix based distance as defined by the original example2
-    static double dist_example2(int* F1, int* F2)
+    static double dist_example2(const int &F1, const int &F2)
     {
         // Cost matrix as defined in example2 of original sources
         // http://robotics.stanford.edu/~rubner/emd/default.htm
@@ -267,7 +203,7 @@ public:
             {8, 4, 3},
             {7, 6, 5}
             };
-        return _COST[*F1][*F2];
+        return _COST[F1][F2];
     }
 
     // end distance functions
@@ -281,10 +217,10 @@ public:
                 f2[3] = { {0,0,0}, {50,100,80}, {255,255,255} };
         double w1[5] = { 0.4, 0.3, 0.2, 0.1 },
               w2[3] = { 0.5, 0.3, 0.2 };
-        signature_t<point3d> s1 = { 4, f1, w1}, s2 = { 3, f2, w2};
+        Signature<point3d> s1(f1, w1, 4), s2(f2, w2, 3);
         double e;
 
-        e = emd(&s1, &s2, dist_example1, 0, 0);
+        e = emd<point3d>(s1, s2, dist_example1, 0, 0);
         shouldEqualToleranceMessage(e, 160.542770, errorTolerance,
                 "Earth Moving Distance not within tolerance");
     }
@@ -296,7 +232,7 @@ public:
         int f1[5] = { 0, 1, 2, 3, 4 }, f2[3] = { 0, 1, 2 };
         double w1[5] = { 0.4, 0.2, 0.2, 0.1, 0.1 },
                w2[3] = { 0.6, 0.2, 0.1 };
-        signature_t<int> s1 = { 5, f1, w1}, s2 = { 3, f2, w2};
+        Signature<int> s1(f1, w1, 5), s2(f2, w2, 3);
 
         double   e;
         flow_t      flow[7];
@@ -315,11 +251,11 @@ public:
          * 2    1   0.100000
          * 0    2   0.100000
          */
-        e = emd(&s1, &s2, dist_example2, flow, &flowSize);
+        e = emd<int>(s1, s2, dist_example2, flow, &flowSize);
         shouldEqualMessage(flowSize, 6, "flow should have 6 items");
         shouldEqualToleranceMessage(e, 1.88889, errorTolerance,
                 "Earth Moving Distance not within tolerance");
-        checkFlowProperties(&s1, &s2, flow, flowSize);
+        checkFlowProperties(s1, s2, flow, flowSize);
     }
 
     void testEMDEpsilon()
@@ -360,8 +296,8 @@ public:
                    4.47410674004744, 17.0102896033561, 1.06496512650127,
                    7.19178601333074, 0.473460690654718, 5.39482381612472,
                    6.64620145201165, 10.6793850720285};
-        signature_t<int> sourceSignature = {1, sourceFeatures, sourceWeights},
-                    targetSignature = {94, targetFeatures, targetWeights};
+        Signature<int> sourceSignature(sourceFeatures, sourceWeights, 1),
+                    targetSignature(targetFeatures, targetWeights, 94);
 
         flow_t flow[94];
         int flowSize;
@@ -372,7 +308,7 @@ public:
         bool raised = false;
         try
         {
-        emd(&sourceSignature, &targetSignature, dist_l1, flow, &flowSize,
+        emd(sourceSignature, targetSignature, dist_l1, flow, &flowSize,
                 options);
         }
         catch(std::runtime_error &c)
@@ -396,9 +332,9 @@ public:
         double emptyWeights[0] = {},
                zeroWeights[5] = {0, 0, 0, 0, 0},
                nonemptyWeights[3] = { 1, 5, 8 };
-        signature_t<int> emptySignature = { 0, emptyFeatures, emptyWeights},
-            zeroSignature = { 5, zeroFeatures, zeroWeights},
-            nonemptySignature = { 3, nonemptyFeatures, nonemptyWeights};
+        Signature<int> emptySignature,
+            zeroSignature(zeroFeatures, zeroWeights, 5),
+            nonemptySignature(nonemptyFeatures, nonemptyWeights, 3);
 
         flow_t      flow[7]; // flow size is bounded by sig1->n + sig2->n - 1
         int         flowSize;
@@ -406,7 +342,7 @@ public:
         // Empty signatures
         try
         {
-        emd(&emptySignature, &emptySignature, dist_l1, flow, &flowSize);
+        emd<int>(emptySignature, emptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -418,7 +354,7 @@ public:
 
         try
         {
-        emd(&nonemptySignature, &emptySignature, dist_l1, flow, &flowSize);
+        emd(nonemptySignature, emptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -430,7 +366,7 @@ public:
 
         try
         {
-        emd(&emptySignature, &nonemptySignature, dist_l1, flow, &flowSize);
+        emd(emptySignature, nonemptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -442,11 +378,10 @@ public:
 
         // Too large signatures
         EMDOptions options = EMDOptions();
-        signature_t<int> bigSignature = {options.maxSigSize + 1, emptyFeatures,
-            emptyWeights};
+        Signature<int> bigSignature(options.maxSigSize+1);
         try
         {
-        emd(&bigSignature, &nonemptySignature, dist_l1, NULL, NULL);
+        emd(bigSignature, nonemptySignature, dist_l1, NULL, NULL);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -457,7 +392,7 @@ public:
         }
         try
         {
-        emd(&nonemptySignature, &bigSignature, dist_l1, NULL, NULL);
+        emd(nonemptySignature, bigSignature, dist_l1, NULL, NULL);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -470,7 +405,7 @@ public:
         // Zero filled signatures
         try
         {
-        emd(&zeroSignature, &zeroSignature, dist_l1, flow, &flowSize);
+        emd(zeroSignature, zeroSignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -481,7 +416,7 @@ public:
         }
         try
         {
-        emd(&zeroSignature, &nonemptySignature, dist_l1, flow, &flowSize);
+        emd(zeroSignature, nonemptySignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -492,7 +427,7 @@ public:
         }
         try
         {
-        emd(&nonemptySignature, &zeroSignature, dist_l1, flow, &flowSize);
+        emd(nonemptySignature, zeroSignature, dist_l1, flow, &flowSize);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -517,7 +452,7 @@ public:
         double e;
         flow_t* flow;
         int flowSize;
-        signature_t<int>* sig;
+        Signature<int> sig;
 
         // Mighty compiler gods, make C++11 available, save us from our sins
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
@@ -530,21 +465,19 @@ public:
             int cBound = binBounds[i];
             for (int j=0; j < nTriesPerSize; ++j)
             {
-                sig = new signature_t<int>;
                 // generateRandomSignature allocates memory for sig
-                generateRandomSignature(sig, cBound * weightFactor, cBound);
+                sig.randomize(cBound * weightFactor, cBound, random=random);
                 // flow size is bounded by n1 + n2 - 1 where n1 and n2 is the
                 // number of bins in the source and target signatures
                 // respectively
                 flow = new flow_t[cBound*2 - 1];
                 e = emd(sig, sig, dist_l1, flow, &flowSize);
                 shouldMsg(e == 0, "EMD to self should be 0");
-                shouldMsg(flowSize == sig->n,
+                shouldMsg(flowSize == sig.size(),
                         "Flow to self should have one arrow for each bin in the signature.");
                 checkFlowProperties(sig, sig, flow, flowSize);
 
                 // free stuff
-                freeSignature(sig);
                 delete [] flow;
             }
         }
@@ -561,12 +494,12 @@ public:
         // how many random signatures should be generated for each size
         const int nTriesPerSize = 10;
         // total weight of the signature will be numberOfBins * weightFactor
-        const double weightFactor = 10;
+        const double weightFactor = 1;
 
         double e1, e2;
         flow_t *oFlow, *rFlow;
         int oFlowSize, rFlowSize;
-        signature_t<int> *sSig, *dSig;
+        Signature<int> sSig, dSig;
 
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
         for (int i=0; i < lenBinBounds; ++i)
@@ -580,11 +513,11 @@ public:
                 rFlow = new flow_t[sBound + dBound  - 1];
                 for (int k=0; k < nTriesPerSize; ++k)
                 {
-                    sSig = new signature_t<int>;
-                    dSig = new signature_t<int>;
                     // generateRandomSignature allocates memory for sig
-                    generateRandomSignature(sSig, sBound*dBound * weightFactor, sBound);
-                    generateRandomSignature(dSig, sBound*dBound * weightFactor, dBound);
+                    sSig.randomize(sBound*dBound * weightFactor, sBound,
+                            random);
+                    dSig.randomize(sBound*dBound * weightFactor, dBound,
+                            random);
                     e1 = emd(sSig, dSig, dist_l1, oFlow, &oFlowSize);
                     checkFlowProperties(sSig, dSig, oFlow, oFlowSize);
 
@@ -595,10 +528,8 @@ public:
                     shouldMsg(oFlowSize == rFlowSize,
                             "Flows from emd(s1, s2) and emd(s2, s1) should have the same size.");
 
-                    // free stuff
-                    freeSignature(sSig);
-                    freeSignature(dSig);
                 }
+                // free stuff
                 delete [] oFlow;
                 delete [] rFlow;
             }
@@ -615,8 +546,8 @@ public:
 
         int sourceFeatures[1] = {0}, targetFeatures[1] = {0};
         double sourceWeights[1] = {0}, targetWeights[1] = {0};
-        signature_t<int> sourceSignature = {1, sourceFeatures, sourceWeights},
-            targetSignature = { 1, targetFeatures, targetWeights};
+        Signature<int> sourceSignature(sourceFeatures, sourceWeights, 1),
+            targetSignature(targetFeatures, targetWeights, 1);
 
         double   e;
         flow_t      flow[1]; // flow size is bounded by sig1->n + sig2->n - 1
@@ -630,16 +561,16 @@ public:
             dBinIndex = random.uniformInt(maxWeight);
             weight = random.uniform(0., maxWeight);
 
-            sourceSignature.Features[0] = sBinIndex;
-            targetSignature.Features[0] = dBinIndex;
-            sourceSignature.Weights[0] = weight;
-            targetSignature.Weights[0] = weight;
+            sourceSignature.features_[0] = sBinIndex;
+            targetSignature.features_[0] = dBinIndex;
+            sourceSignature.weights_[0] = weight;
+            targetSignature.weights_[0] = weight;
 
-            e = emd(&sourceSignature, &targetSignature,
+            e = emd(sourceSignature, targetSignature,
                     dist_l1, flow, &flowSize);
             shouldMsg(flowSize == 1,
                     "Flow between single entry signatures should have 1 element.");
-            shouldEqualToleranceMessage(e, dist_l1(&sBinIndex, &dBinIndex),
+            shouldEqualToleranceMessage(e, dist_l1(sBinIndex, dBinIndex),
                     errorTolerance, "EMD between single entry signatures not in expected tolerance.");
         }
     }
@@ -655,9 +586,9 @@ public:
 
         int singleFeatures[1] = {0};
         double singleWeights[1] = {0};
-        signature_t<int> singleSignature = {1, singleFeatures, singleWeights};
+        Signature<int> singleSignature(singleFeatures, singleWeights, 1);
 
-        signature_t<int> *manySig;
+        Signature<int> manySig;
 
         double   e;
         flow_t      *flow;
@@ -674,40 +605,38 @@ public:
             {
                 sBinIndex = random.uniformInt(maxWeight);
                 weight = random.uniform(0., maxWeight);
-                singleSignature.Features[0] = sBinIndex;
-                singleSignature.Weights[0] = weight;
+                singleSignature.features_[0] = sBinIndex;
+                singleSignature.weights_[0] = weight;
 
-                manySig = new signature_t<int>;
-                generateRandomSignature(manySig, weight, cBound);
+                manySig.randomize(weight, cBound, random);
                 flow = new flow_t[cBound];
 
-                e = emd(&singleSignature, manySig, dist_l1, flow, &flowSize);
-                shouldMsg(flowSize == manySig->n,
+                e = emd(singleSignature, manySig, dist_l1, flow, &flowSize);
+                shouldMsg(flowSize == manySig.size(),
                         "Flow should have one arrow for each bin in the target signature.");
-                checkFlowProperties(&singleSignature, manySig, flow,
+                checkFlowProperties(singleSignature, manySig, flow,
                         flowSize);
 
                 // calculate expected value
                 expected = 0;
-                for(int k=0; k < manySig->n; ++k)
+
+                for(int k=0; k < manySig.size(); ++k)
                 {
-                    expected += dist_l1(manySig->Features + k,
-                            singleSignature.Features) * manySig->Weights[k];
+                    expected += dist_l1(manySig.features_[k], singleSignature.features_[0]) * manySig.weights_[k];
                 }
                 expected /= weight;
 
                 shouldEqualToleranceMessage(e, expected, errorTolerance,
                         "emd not equal to expected value.");
 
-                e = emd(manySig, &singleSignature, dist_l1, flow, &flowSize);
-                shouldMsg(flowSize == manySig->n,
+                e = emd(manySig, singleSignature, dist_l1, flow, &flowSize);
+                shouldMsg(flowSize == manySig.size(),
                         "Flow should have one arrow for each bin in the source signature.");
-                checkFlowProperties(manySig, &singleSignature, flow,
+                checkFlowProperties(manySig, singleSignature, flow,
                         flowSize);
                 shouldEqualToleranceMessage(e, expected, errorTolerance,
                         "emd not equal to expected value.");
 
-                freeSignature(manySig);
                 delete [] flow;
             }
         }
@@ -725,7 +654,7 @@ public:
         double e1, e2, scaleFactor;
         flow_t *flow;
         int flowSize;
-        signature_t<int> *sSig, *dSig;
+        Signature<int> sSig, dSig;
 
         int lenBinBounds = sizeof(binBounds)/sizeof(int);
         for (int i=0; i < lenBinBounds; ++i)
@@ -738,30 +667,23 @@ public:
                 flow = new flow_t[sBound + dBound  - 1];
                 for (int k=0; k < nTriesPerSize; ++k)
                 {
-                    sSig = new signature_t<int>;
-                    dSig = new signature_t<int>;
-
                     // generateRandomSignature allocates memory for sig
-                    generateRandomSignature(sSig,
-                            random.uniform(0., maxWeight), sBound);
-                    generateRandomSignature(dSig,
-                            random.uniform(0., maxWeight), dBound);
+                    sSig.randomize(random.uniform(0., maxWeight), sBound,
+                            random);
+                    dSig.randomize(random.uniform(0., maxWeight), dBound,
+                            random);
                     e1 = emd(sSig, dSig, dist_l1, flow, &flowSize);
                     checkFlowProperties(sSig, dSig, flow, flowSize);
 
                     // scale source and target weights
                     scaleFactor = random.uniform(.5, 5.);
-                    scaleSignature(sSig, scaleFactor);
-                    scaleSignature(dSig, scaleFactor);
+                    sSig.scale(scaleFactor);
+                    dSig.scale(scaleFactor);
 
                     e2 = emd(sSig, dSig, dist_l1, flow, &flowSize);
                     shouldEqualToleranceMessage(e1, e2, errorTolerance,
                             "emd should be invariant under scaling weights.");
                     checkFlowProperties(sSig, dSig, flow, flowSize);
-
-                    // free stuff
-                    freeSignature(sSig);
-                    freeSignature(dSig);
                 }
                 delete [] flow;
             }

@@ -37,6 +37,9 @@
 #define VIGRA_EMD_HXX
 
 #include <vigra/error.hxx>
+#include <vigra/array_vector.hxx>
+#include <vigra/random.hxx>
+#include <ostream>
 #include <limits>
 
 namespace vigra {
@@ -44,9 +47,99 @@ namespace vigra {
 template <class FeatureType>
 class Signature
 {
-    // implement this class
-    // (used to represent the input histograms or signatures)
+public:
+    typedef typename ArrayVector<FeatureType>::const_iterator
+        ConstFeatureIterator;
+    typedef ArrayVector<double>::const_iterator ConstWeightIterator;
+
+    Signature() : features_(), weights_() {}
+
+    /** Initialize a Signature and allocate space for n bins.
+    */
+    Signature(int n) : features_(n), weights_(n) {}
+
+    /** Initialize a signature by copying data from the given arrays
+    */
+    Signature(FeatureType *features, double* weights, int size)
+        : features_(features, features + size),
+        weights_(weights, weights + size) {}
+
+    /* Return the number of bins in this signature.
+    */
+    int size() const
+    {
+        return features_.size();
+    }
+
+    /** Scale weights by the given factor.
+    */
+    void scale(double factor)
+    {
+        for (int i=0; i < weights_.size(); ++i)
+        {
+            weights_[i] *= factor;
+        }
+    }
+
+    /** Generate a random signature with given totalWeight.
+     If randomBinCount = 1, number of bins is selected randomly in
+     [1, maxBin]. Otherwise, it is taken to be maxBins.
+    */
+    template<class Engine>
+    void randomize(double totalWeight, int maxBins,
+            RandomNumberGenerator<Engine> &random = RandomMT19937(),
+            bool randomBinCount=1);
+
+    ArrayVector<FeatureType> features_;
+    ArrayVector<double> weights_;
 };
+
+
+template<typename FeatureType>
+std::ostream &operator<<(std::ostream &out, const Signature<FeatureType> &sig)
+{
+    out.precision(15);
+    out<<"signature:"<<std::endl;
+    for (int i=0; i < sig.size(); ++i)
+    {
+        out<<"label: "<<sig.features_[i]<<" weight: "<<sig.weights_[i]<<std::endl;
+    }
+    return out;
+}
+
+template<> template<class Engine>
+void Signature<int>::randomize(double totalWeight, int maxBins,
+        RandomNumberGenerator<Engine> &random,
+        bool randomBinCount)
+{
+    vigra_precondition(maxBins > 0,
+            "Refusing to generate empty random signature.");
+    // clear existing data
+    features_.clear();
+    weights_.clear();
+
+    int nBins;
+
+    if (!randomBinCount)
+        nBins = maxBins;
+    else
+        nBins = random.uniformInt(maxBins) + 1; // avoid 0
+
+    features_.resize(nBins);
+    weights_.resize(nBins);
+
+    double currentTotal = 0;
+    for (int i=0; i < nBins; ++i)
+    {
+        features_[i] = i;
+        weights_[i] = random.uniform(0, totalWeight*maxBins);
+        currentTotal += weights_[i];
+    }
+    // normalize - adjust to totalWeight
+    double scaleFactor = totalWeight/currentTotal;
+    scale(scaleFactor);
+}
+
 
 class EMDFlow
 {

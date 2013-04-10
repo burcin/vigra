@@ -23,15 +23,6 @@
 
 /* DEFINITIONS */
 
-template<typename feature_t>
-struct signature_t
-{
-  int n;                /* Number of features in the signature */
-  feature_t *Features;  /* Pointer to the features vector */
-  double *Weights;       /* Pointer to the weights of the features */
-};
-
-
 typedef struct
 {
   int from;             /* Feature number in signature 1 */
@@ -41,8 +32,9 @@ typedef struct
 
 
 /******************************************************************************
-double emd(signature_t *Signature1, signature_t *Signature2,
-	  double (*Dist)(feature_t *, feature_t *), flow_t *Flow, int *FlowSize)
+double emd(const Signature &Signature1, const Signature &Signature2,
+	  double (*Dist)(const feature_t &, const feature_t &),
+      flow_t *Flow, int *FlowSize)
 
 where
 
@@ -60,9 +52,9 @@ where
 
 ******************************************************************************/
 template<typename feature_t>
-double emd(signature_t<feature_t> *Signature1,
-        signature_t<feature_t> *Signature2,
-	  double (*func)(feature_t *, feature_t *),
+double emd(const vigra::Signature<feature_t> &Signature1,
+        const vigra::Signature<feature_t> &Signature2,
+	  double (*func)(const feature_t&, const feature_t&),
 	  flow_t *Flow, int *FlowSize,
       const vigra::EMDOptions& options = vigra::EMDOptions());
 
@@ -83,9 +75,9 @@ public:
         initializeMemory();
     }
 
-    double operator()(signature_t<feature_t> *Signature1,
-            signature_t<feature_t> *Signature2,
-            double (*func)(feature_t *, feature_t *),
+    double operator()(const Signature<feature_t> &signature1,
+            const Signature<feature_t> &signature2,
+            double (*func)(const feature_t&, const feature_t&),
             flow_t *Flow, int *FlowSize);
 
     ~EMDComputerRubner()
@@ -119,9 +111,9 @@ protected:
     } node2_t;
 
     /* DECLARATION OF FUNCTIONS */
-    double init(signature_t<feature_t> *Signature1,
-            signature_t<feature_t> *Signature2,
-            double (*Dist)(feature_t *, feature_t *));
+    double init(const Signature<feature_t> &signature1,
+            const Signature<feature_t> &signature2,
+            double (*Dist)(const feature_t&, const feature_t&));
     void findBasicVariables(node1_t *U, node1_t *V);
     int isOptimal(node1_t *U, node1_t *V);
     int findLoop(node2_t **Loop);
@@ -160,9 +152,9 @@ protected:
 
 template<typename feature_t>
 double EMDComputerRubner<feature_t>::operator()(
-        signature_t<feature_t> *Signature1,
-        signature_t<feature_t> *Signature2,
-	  double (*Dist)(feature_t *, feature_t *),
+        const Signature<feature_t> &signature1,
+        const Signature<feature_t> &signature2,
+	  double (*Dist)(const feature_t &, const feature_t &),
 	  flow_t *Flow, int *FlowSize)
 {
   int itr;
@@ -172,17 +164,19 @@ double EMDComputerRubner<feature_t>::operator()(
   flow_t *FlowP = NULL;
   node1_t U[options.maxSigSize + 1], V[options.maxSigSize + 1];
 
-  vigra_precondition(Signature1->n > 0, "Source signature cannot be empty!");
-  vigra_precondition(Signature2->n > 0, "Target signature cannot be empty!");
-  if (Signature1->n > options.maxSigSize ||
-          Signature2->n > options.maxSigSize)
+  vigra_precondition(signature1.size() > 0,
+          "Source signature cannot be empty!");
+  vigra_precondition(signature2.size() > 0,
+          "Target signature cannot be empty!");
+  if (signature1.size() > options.maxSigSize ||
+          signature2.size() > options.maxSigSize)
     {
         std::ostringstream s;
         s<<"emd: Signature size is limited to "<<options.maxSigSize<<std::endl;
         vigra_precondition(false, s.str());
     }
 
-  w = init(Signature1, Signature2, Dist);
+  w = init(signature1, signature2, Dist);
 
 #if EMD_DEBUG_LEVEL > 1
   printf("\nINITIAL SOLUTION:\n");
@@ -222,7 +216,7 @@ double EMDComputerRubner<feature_t>::operator()(
     {
       if (XP == _EnterX)  /* _EnterX IS THE EMPTY SLOT */
 	continue;
-      if (XP->i == Signature1->n || XP->j == Signature2->n)  /* DUMMY FEATURE */
+      if (XP->i == signature1.size() || XP->j == signature2.size())  /* DUMMY FEATURE */
 	continue;
 
       if (XP->val == 0)  /* ZERO FLOW */
@@ -256,42 +250,48 @@ double EMDComputerRubner<feature_t>::operator()(
    init
 **********************/
 template<typename feature_t>
-double EMDComputerRubner<feature_t>::init(signature_t<feature_t> *Signature1,
-        signature_t<feature_t> *Signature2,
-		  double (*Dist)(feature_t *, feature_t *))
+double EMDComputerRubner<feature_t>::init(
+        const Signature<feature_t> &signature1,
+        const Signature<feature_t> &signature2,
+		  double (*Dist)(const feature_t&, const feature_t&))
 {
   int i, j;
   double sSum, dSum, diff;
-  feature_t *P1, *P2;
   double S[options.maxSigSize + 1], D[options.maxSigSize + 1];
 
-  _n1 = Signature1->n;
-  _n2 = Signature2->n;
+  _n1 = signature1.size();
+  _n2 = signature2.size();
 
   /* COMPUTE THE DISTANCE MATRIX */
   _maxC = 0;
-  for(i=0, P1=Signature1->Features; i < _n1; i++, P1++)
-    for(j=0, P2=Signature2->Features; j < _n2; j++, P2++)
+  typename Signature<feature_t>::ConstFeatureIterator P1 =
+      signature1.features_.begin();
+  for(i = 0; i < _n1; i++, P1++)
+  {
+    typename Signature<feature_t>::ConstFeatureIterator P2 =
+        signature2.features_.begin();
+    for(j=0; j < _n2; j++, P2++)
       {
-	_C[i][j] = Dist(P1, P2);
+	_C[i][j] = Dist(*P1, *P2);
 	if (_C[i][j] > _maxC)
 	  _maxC = _C[i][j];
       }
+  }
 
   /* SUM UP THE SUPPLY AND DEMAND */
   sSum = 0.0;
   for(i=0; i < _n1; i++)
     {
-      S[i] = Signature1->Weights[i];
-      sSum += Signature1->Weights[i];
+      S[i] = signature1.weights_[i];
+      sSum += signature1.weights_[i];
       _RowsX[i] = NULL;
     }
   vigra_precondition(sSum > 0, "Total weight of source signature cannot be 0!");
   dSum = 0.0;
   for(j=0; j < _n2; j++)
     {
-      D[j] = Signature2->Weights[j];
-      dSum += Signature2->Weights[j];
+      D[j] = signature2.weights_[j];
+      dSum += signature2.weights_[j];
       _ColsX[j] = NULL;
     }
   vigra_precondition(dSum > 0, "Total weight of target signature cannot be 0!");
@@ -952,9 +952,9 @@ void EMDComputerRubner<feature_t>::printSolution()
 } // namespace vigra
 
 template<typename feature_t>
-double emd(signature_t<feature_t> *Signature1,
-        signature_t<feature_t> *Signature2,
-	  double (*Dist)(feature_t *, feature_t *),
+double emd(const vigra::Signature<feature_t> &Signature1,
+        const vigra::Signature<feature_t> &Signature2,
+	  double (*Dist)(const feature_t&, const feature_t&),
 	  flow_t *Flow, int *FlowSize,
       const vigra::EMDOptions& options)
 {
