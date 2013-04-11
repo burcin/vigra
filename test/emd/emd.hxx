@@ -34,10 +34,18 @@ where
               where the resulting flow will be stored.
 
 ******************************************************************************/
-template<typename feature_t>
+template<typename feature_t,
+    template<typename ValueType> class DistanceFunctor>
 double emd(const vigra::Signature<feature_t> &Signature1,
         const vigra::Signature<feature_t> &Signature2,
-	  double (*func)(const feature_t&, const feature_t&),
+	  DistanceFunctor<feature_t> const & Dist,
+	  const vigra::EMDOptions& options = vigra::EMDOptions());
+
+template<typename feature_t,
+    template<typename ValueType> class DistanceFunctor>
+double emd(const vigra::Signature<feature_t> &Signature1,
+        const vigra::Signature<feature_t> &Signature2,
+	  DistanceFunctor<feature_t> const & func,
 	  vigra::EMDFlow& flow,
       const vigra::EMDOptions& options = vigra::EMDOptions());
 
@@ -58,14 +66,16 @@ public:
         initializeMemory();
     }
 
+    template<template<typename ValueType> class DistanceFunctor>
     double operator()(const Signature<feature_t> &signature1,
             const Signature<feature_t> &signature2,
-            double (*func)(const feature_t&, const feature_t&),
+            DistanceFunctor<feature_t> const & func,
             EMDFlow &Flow);
 
+    template<template<typename ValueType> class DistanceFunctor>
     double operator()(const Signature<feature_t> &signature1,
             const Signature<feature_t> &signature2,
-            double (*func)(const feature_t&, const feature_t&));
+            DistanceFunctor<feature_t> const & func);
 
     ~EMDComputerRubner()
     {
@@ -98,9 +108,10 @@ protected:
     } node2_t;
 
     /* DECLARATION OF FUNCTIONS */
+    template<template<typename ValueType> class DistanceFunctor>
     double init(const Signature<feature_t> &signature1,
             const Signature<feature_t> &signature2,
-            double (*Dist)(const feature_t&, const feature_t&));
+            DistanceFunctor<feature_t> const & Dist);
     void findBasicVariables(node1_t *U, node1_t *V);
     int isOptimal(node1_t *U, node1_t *V);
     int findLoop(node2_t **Loop);
@@ -159,10 +170,11 @@ void EMDComputerRubner<feature_t>::getFlow(
 }
 
 template<typename feature_t>
+template<template<typename ValueType> class DistanceFunctor>
 double EMDComputerRubner<feature_t>::operator()(
         const Signature<feature_t> &signature1,
         const Signature<feature_t> &signature2,
-	  double (*Dist)(const feature_t &, const feature_t &), EMDFlow &flow)
+	  DistanceFunctor<feature_t> const & Dist, EMDFlow &flow)
 {
     double e = (*this)(signature1, signature2, Dist);
     getFlow(signature1, signature2, flow);
@@ -170,10 +182,11 @@ double EMDComputerRubner<feature_t>::operator()(
 }
 
 template<typename feature_t>
+template<template<typename ValueType> class DistanceFunctor>
 double EMDComputerRubner<feature_t>::operator()(
         const Signature<feature_t> &signature1,
         const Signature<feature_t> &signature2,
-	  double (*Dist)(const feature_t &, const feature_t &))
+	  DistanceFunctor<feature_t> const & Dist)
 {
   int itr;
   double totalCost;
@@ -256,10 +269,11 @@ double EMDComputerRubner<feature_t>::operator()(
    init
 **********************/
 template<typename feature_t>
+template<template<typename ValueType> class DistanceFunctor>
 double EMDComputerRubner<feature_t>::init(
         const Signature<feature_t> &signature1,
         const Signature<feature_t> &signature2,
-		  double (*Dist)(const feature_t&, const feature_t&))
+	    DistanceFunctor<feature_t> const & Dist)
 {
   int i, j;
   double sSum, dSum, diff;
@@ -957,20 +971,22 @@ void EMDComputerRubner<feature_t>::printSolution()
 }
 } // namespace vigra
 
-template<typename feature_t>
+template<typename feature_t,
+    template<typename ValueType> class DistanceFunctor>
 double emd(const vigra::Signature<feature_t> &Signature1,
         const vigra::Signature<feature_t> &Signature2,
-	  double (*Dist)(const feature_t&, const feature_t&),
-	  const vigra::EMDOptions& options = vigra::EMDOptions())
+	  DistanceFunctor<feature_t> const & Dist,
+	  const vigra::EMDOptions& options)
 {
     return vigra::EMDComputerRubner<feature_t>(options)(Signature1, Signature2, Dist);
 }
 
 
-template<typename feature_t>
+template<typename feature_t,
+    template<typename ValueType> class DistanceFunctor>
 double emd(const vigra::Signature<feature_t> &Signature1,
         const vigra::Signature<feature_t> &Signature2,
-	  double (*Dist)(const feature_t&, const feature_t&),
+	  DistanceFunctor<feature_t> const & Dist,
 	  vigra::EMDFlow &Flow, const vigra::EMDOptions& options)
 {
     return vigra::EMDComputerRubner<feature_t>(options)(Signature1, Signature2, Dist, Flow);

@@ -38,6 +38,7 @@
 
 #include <vigra/error.hxx>
 #include <vigra/array_vector.hxx>
+#include <vigra/matrix.hxx>
 #include <vigra/random.hxx>
 #include <ostream>
 #include <limits>
@@ -254,8 +255,85 @@ public:
     }
 };
 
-// implement suitable ground distance functors for the most common feature types
+/********************************************************/
 
+/** Base class for different norm implemenations.
+
+    <b> Traits defined:</b>
+
+    <tt>FunctorTraits::isBinaryFunctor</tt> are true (<tt>VigraTrueType</tt>)
+*/
+template <class ValueType>
+class NormBase
+{
+  public:
+    typedef ValueType first_argument_type;
+    typedef ValueType second_argument_type;
+    typedef double result_type;
+
+    double operator()(ValueType const & v1, ValueType const & v2) const;
+};
+
+template <class T>
+class FunctorTraits<NormBase<T> >
+: public FunctorTraitsBase<NormBase<T> >
+{
+public:
+    typedef VigraTrueType isBinaryFunctor;
+};
+
+/** \brief L1Norm implementation.
+*/
+template <class ValueType>
+class L1Norm : public NormBase<ValueType>
+{
+public:
+
+    double operator()(ValueType const & v1, ValueType const & v2) const;
+};
+
+/** Specialize L1Norm for integers
+*/
+// FIXME: generalize this to arithmetic types
+template <>
+double L1Norm<int>::operator()(int const &v1, int const &v2) const
+{
+    return std::abs(v1 - v2);
+}
+
+/** \brief L2Norm implementation.
+*/
+template <class ValueType>
+class L2Norm : public NormBase<ValueType>
+{
+public:
+
+    double operator()(ValueType const & v1, ValueType const & v2) const;
+};
+
+/** Norm defined by a cost matrix.
+*/
+template <typename T>
+class MatrixNorm;
+
+// This only makes sense for integer values, so we implement only
+// a specialization for ValueType = int.
+template <>
+class MatrixNorm<int> : public NormBase<int>
+{
+public:
+
+    MatrixNorm(double* data, int nRows, int nCols)
+        : distMatrix_(nRows, nCols, data) {}
+
+    double operator()(int const & v1, int const & v2) const
+    {
+        return distMatrix_(v1, v2);
+    }
+
+protected:
+    Matrix<double> distMatrix_;
+};
 /*****************************************************************************/
 
     /** \brief Compute the earth mover distance between two histograms or signatures.

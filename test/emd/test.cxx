@@ -42,15 +42,30 @@
 
 using namespace vigra;
 
+// 3d point type used for example1 from original source code
+// see also testEMD_RTG_example1()
+struct point3d {
+    int X,Y,Z;
+};
+
+namespace vigra
+{
+
+// L2 distance on 3-dimensional space defined by the original example1
+template <>
+double L2Norm<point3d>::operator()(point3d const &F1,
+        point3d const & F2) const
+{
+    int dX = F1.X - F2.X, dY = F1.Y - F2.Y, dZ = F1.Z - F2.Z;
+    return sqrt(dX*dX + dY*dY + dZ*dZ);
+}
+
+} // namespace vigra
+
 class EarthMoverDistanceTest
 {
     RandomMT19937 random;
 
-    // 3d point type used for example1 from original source code
-    // see also testEMD_RTG_example1()
-    struct point3d {
-        int X,Y,Z;
-    };
 
 public:
     const double errorTolerance;
@@ -162,42 +177,6 @@ public:
     }
 
     /*******************************************************************/
-    // distance functions
-    //
-    // temporary workaround distance functions which work with the
-    // definition in the original emd sources.
-    // Should be replaced by a functor.
-
-    // L1 norm in one dimension
-    static double dist_l1(const int &F1, const int &F2)
-    {
-        return std::abs(F1 - F2);
-    }
-
-    // L2 distance on 3-dimensional space defined by the original example1
-    static double dist_example1(const point3d& F1, const point3d& F2)
-    {
-        int dX = F1.X - F2.X, dY = F1.Y - F2.Y, dZ = F1.Z - F2.Z;
-        return sqrt(dX*dX + dY*dY + dZ*dZ);
-    }
-
-    // Matrix based distance as defined by the original example2
-    static double dist_example2(const int &F1, const int &F2)
-    {
-        // Cost matrix as defined in example2 of original sources
-        // http://robotics.stanford.edu/~rubner/emd/default.htm
-        static double _COST[5][3] = {
-            {3, 5, 2},
-            {0, 2, 5},
-            {1, 1, 3},
-            {8, 4, 3},
-            {7, 6, 5}
-            };
-        return _COST[F1][F2];
-    }
-
-    // end distance functions
-    /*******************************************************************/
 
     // example 1 on
     // http://robotics.stanford.edu/~rubner/emd/default.htm
@@ -210,7 +189,7 @@ public:
         Signature<point3d> s1(f1, w1, 4), s2(f2, w2, 3);
         double e;
 
-        e = emd<point3d>(s1, s2, dist_example1);
+        e = emd<point3d>(s1, s2, L2Norm<point3d>());
         shouldEqualToleranceMessage(e, 160.542770, errorTolerance,
                 "Earth Moving Distance not within tolerance");
     }
@@ -223,6 +202,18 @@ public:
         double w1[5] = { 0.4, 0.2, 0.2, 0.1, 0.1 },
                w2[3] = { 0.6, 0.2, 0.1 };
         Signature<int> s1(f1, w1, 5), s2(f2, w2, 3);
+
+        // Cost matrix as defined in example2 of original sources
+        // http://robotics.stanford.edu/~rubner/emd/default.htm
+        static double _COST[] = {
+            3, 5, 2,
+            0, 2, 5,
+            1, 1, 3,
+            8, 4, 3,
+            7, 6, 5
+            };
+
+        MatrixNorm<int> dist_example2(_COST, 5, 3);
 
         double   e;
         EMDFlow  flow;
@@ -296,7 +287,7 @@ public:
         bool raised = false;
         try
         {
-        emd(sourceSignature, targetSignature, dist_l1, flow, options);
+        emd(sourceSignature, targetSignature, L1Norm<int>(), flow, options);
         }
         catch(std::runtime_error &c)
         {
@@ -328,7 +319,7 @@ public:
         // Empty signatures
         try
         {
-        emd<int>(emptySignature, emptySignature, dist_l1, flow);
+        emd<int>(emptySignature, emptySignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -340,7 +331,7 @@ public:
 
         try
         {
-        emd(nonemptySignature, emptySignature, dist_l1, flow);
+        emd(nonemptySignature, emptySignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -352,7 +343,7 @@ public:
 
         try
         {
-        emd(emptySignature, nonemptySignature, dist_l1, flow);
+        emd(emptySignature, nonemptySignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -367,7 +358,7 @@ public:
         Signature<int> bigSignature(options.maxSigSize+1);
         try
         {
-        emd(bigSignature, nonemptySignature, dist_l1);
+        emd(bigSignature, nonemptySignature, L1Norm<int>());
         }
         catch(vigra::ContractViolation &c)
         {
@@ -378,7 +369,7 @@ public:
         }
         try
         {
-        emd(nonemptySignature, bigSignature, dist_l1);
+        emd(nonemptySignature, bigSignature, L1Norm<int>());
         }
         catch(vigra::ContractViolation &c)
         {
@@ -391,7 +382,7 @@ public:
         // Zero filled signatures
         try
         {
-        emd(zeroSignature, zeroSignature, dist_l1, flow);
+        emd(zeroSignature, zeroSignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -402,7 +393,7 @@ public:
         }
         try
         {
-        emd(zeroSignature, nonemptySignature, dist_l1, flow);
+        emd(zeroSignature, nonemptySignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -413,7 +404,7 @@ public:
         }
         try
         {
-        emd(nonemptySignature, zeroSignature, dist_l1, flow);
+        emd(nonemptySignature, zeroSignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -455,7 +446,7 @@ public:
                 // flow size is bounded by n1 + n2 - 1 where n1 and n2 is the
                 // number of bins in the source and target signatures
                 // respectively
-                e = emd(sig, sig, dist_l1, flow);
+                e = emd(sig, sig, L1Norm<int>(), flow);
                 shouldMsg(e == 0, "EMD to self should be 0");
                 shouldMsg(flow.size() == sig.size(),
                         "Flow to self should have one arrow for each bin in the signature.");
@@ -498,10 +489,10 @@ public:
                             random);
                     dSig.randomize(sBound*dBound * weightFactor, dBound,
                             random);
-                    e1 = emd(sSig, dSig, dist_l1, oFlow);
+                    e1 = emd(sSig, dSig, L1Norm<int>(), oFlow);
                     checkFlowProperties(sSig, dSig, oFlow);
 
-                    e2 = emd(dSig, sSig, dist_l1, rFlow);
+                    e2 = emd(dSig, sSig, L1Norm<int>(), rFlow);
                     checkFlowProperties(dSig, sSig, rFlow);
                     shouldEqualToleranceMessage(e1, e2, errorTolerance,
                             "emd(s1, s2) != emd(s2, s1)");
@@ -545,10 +536,10 @@ public:
             sourceSignature.weights_[0] = weight;
             targetSignature.weights_[0] = weight;
 
-            e = emd(sourceSignature, targetSignature, dist_l1, flow);
+            e = emd(sourceSignature, targetSignature, L1Norm<int>(), flow);
             shouldMsg(flow.size() == 1,
                     "Flow between single entry signatures should have 1 element.");
-            shouldEqualToleranceMessage(e, dist_l1(sBinIndex, dBinIndex),
+            shouldEqualToleranceMessage(e, L1Norm<int>()(sBinIndex, dBinIndex),
                     errorTolerance, "EMD between single entry signatures not in expected tolerance.");
 
             flow.clear();
@@ -589,7 +580,7 @@ public:
 
                 manySig.randomize(weight, cBound, random);
 
-                e = emd(singleSignature, manySig, dist_l1, flow);
+                e = emd(singleSignature, manySig, L1Norm<int>(), flow);
                 shouldMsg(flow.size() == manySig.size(),
                         "Flow should have one arrow for each bin in the target signature.");
                 checkFlowProperties(singleSignature, manySig, flow);
@@ -600,7 +591,7 @@ public:
 
                 for(int k=0; k < manySig.size(); ++k)
                 {
-                    expected += dist_l1(manySig.features_[k], singleSignature.features_[0]) * manySig.weights_[k];
+                    expected += L1Norm<int>()(manySig.features_[k], singleSignature.features_[0]) * manySig.weights_[k];
                 }
                 expected /= weight;
 
@@ -608,7 +599,7 @@ public:
                         "emd not equal to expected value.");
 
                 flow.clear();
-                e = emd(manySig, singleSignature, dist_l1, flow);
+                e = emd(manySig, singleSignature, L1Norm<int>(), flow);
                 shouldMsg(flow.size() == manySig.size(),
                         "Flow should have one arrow for each bin in the source signature.");
                 checkFlowProperties(manySig, singleSignature, flow);
@@ -648,7 +639,7 @@ public:
                             random);
                     dSig.randomize(random.uniform(0., maxWeight), dBound,
                             random);
-                    e1 = emd(sSig, dSig, dist_l1, flow);
+                    e1 = emd(sSig, dSig, L1Norm<int>(), flow);
                     checkFlowProperties(sSig, dSig, flow);
 
                     // scale source and target weights
@@ -658,7 +649,7 @@ public:
 
                     flow.clear();
 
-                    e2 = emd(sSig, dSig, dist_l1, flow);
+                    e2 = emd(sSig, dSig, L1Norm<int>(), flow);
                     shouldEqualToleranceMessage(e1, e2, errorTolerance,
                             "emd should be invariant under scaling weights.");
                     checkFlowProperties(sSig, dSig, flow);
