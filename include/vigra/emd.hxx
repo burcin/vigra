@@ -353,6 +353,11 @@ public:
 protected:
     Matrix<double> distMatrix_;
 };
+
+// forward declaration of EMD computation class
+template<typename feature_t>
+class EMDComputerRubner;
+
 /*****************************************************************************/
 
     /** \brief Compute the earth mover distance between two histograms or signatures.
@@ -386,29 +391,33 @@ protected:
                                              EMDOptions().setSomeOption());
     */
 template<class FeatureType, class GroundDistanceFunctor>
-double 
+double
 earthMoverDistance(Signature<FeatureType> const & signature1, 
                    Signature<FeatureType> const & signature2, 
                    GroundDistanceFunctor const & groundDistance,
                    EMDFlow & flow,
                    EMDOptions const & options = EMDOptions())
 {
+    return EMDComputerRubner<FeatureType>(options)(signature1,
+            signature2, groundDistance, flow);
 }
 
     // don't compute the flow here
 template<class FeatureType, class GroundDistanceFunctor>
-void 
+double
 earthMoverDistance(Signature<FeatureType> const & signature1, 
                    Signature<FeatureType> const & signature2, 
                    GroundDistanceFunctor const & groundDistance,
                    EMDOptions const & options = EMDOptions())
 {
+    return EMDComputerRubner<FeatureType>(options)(signature1,
+            signature2, groundDistance);
 }
 
     // use the default ground distance for the given FeatureType
     // (the default should be deduced automatically by template matching)
 template<class FeatureType>
-void 
+double
 earthMoverDistance(Signature<FeatureType> const & signature1, 
                    Signature<FeatureType> const & signature2,
                    EMDFlow & flow,
@@ -418,7 +427,7 @@ earthMoverDistance(Signature<FeatureType> const & signature1,
 
     // likewise, but without computing the flow
 template<class FeatureType>
-void 
+double
 earthMoverDistance(Signature<FeatureType> const & signature1, 
                    Signature<FeatureType> const & signature2,
                    EMDOptions const & options = EMDOptions())

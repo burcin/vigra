@@ -38,7 +38,6 @@
 #include <vigra/random.hxx>
 #include <vigra/error.hxx>
 
-#include "emd.hxx"
 
 using namespace vigra;
 
@@ -189,7 +188,7 @@ public:
         Signature<point3d> s1(f1, w1, 4), s2(f2, w2, 3);
         double e;
 
-        e = emd<point3d>(s1, s2, L2Norm<point3d>());
+        e = earthMoverDistance(s1, s2, L2Norm<point3d>());
         shouldEqualToleranceMessage(e, 160.542770, errorTolerance,
                 "Earth Moving Distance not within tolerance");
     }
@@ -231,7 +230,7 @@ public:
          * 2    1   0.100000
          * 0    2   0.100000
          */
-        e = emd<int>(s1, s2, dist_example2, flow);
+        e = earthMoverDistance(s1, s2, dist_example2, flow);
         shouldEqualMessage(flow.size(), 6, "flow should have 6 items");
         shouldEqualToleranceMessage(e, 1.88889, errorTolerance,
                 "Earth Moving Distance not within tolerance");
@@ -287,7 +286,8 @@ public:
         bool raised = false;
         try
         {
-        emd(sourceSignature, targetSignature, L1Norm<int>(), flow, options);
+        earthMoverDistance(sourceSignature, targetSignature,
+                L1Norm<int>(), flow, options);
         }
         catch(std::runtime_error &c)
         {
@@ -300,8 +300,8 @@ public:
         if (!raised)
             shouldMsg(false, "epsilon=0 should not produce a valid flow for this example.");
     }
-    // Test if emd() behaves properly for empty and too large source or
-    // target signatures.
+    // Test if earthMoverDistance() behaves properly for empty and too
+    // large source or target signatures.
     void testEMDEmptyInOut()
     {
         int emptyFeatures[0] = {},
@@ -319,7 +319,8 @@ public:
         // Empty signatures
         try
         {
-        emd<int>(emptySignature, emptySignature, L1Norm<int>(), flow);
+        earthMoverDistance(emptySignature, emptySignature, L1Norm<int>(),
+                flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -331,7 +332,8 @@ public:
 
         try
         {
-        emd(nonemptySignature, emptySignature, L1Norm<int>(), flow);
+        earthMoverDistance(nonemptySignature, emptySignature, L1Norm<int>(),
+                flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -343,7 +345,8 @@ public:
 
         try
         {
-        emd(emptySignature, nonemptySignature, L1Norm<int>(), flow);
+        earthMoverDistance(emptySignature, nonemptySignature, L1Norm<int>(),
+                flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -358,7 +361,7 @@ public:
         Signature<int> bigSignature(options.maxSigSize+1);
         try
         {
-        emd(bigSignature, nonemptySignature, L1Norm<int>());
+        earthMoverDistance(bigSignature, nonemptySignature, L1Norm<int>());
         }
         catch(vigra::ContractViolation &c)
         {
@@ -369,7 +372,7 @@ public:
         }
         try
         {
-        emd(nonemptySignature, bigSignature, L1Norm<int>());
+        earthMoverDistance(nonemptySignature, bigSignature, L1Norm<int>());
         }
         catch(vigra::ContractViolation &c)
         {
@@ -382,7 +385,7 @@ public:
         // Zero filled signatures
         try
         {
-        emd(zeroSignature, zeroSignature, L1Norm<int>(), flow);
+        earthMoverDistance(zeroSignature, zeroSignature, L1Norm<int>(), flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -393,7 +396,8 @@ public:
         }
         try
         {
-        emd(zeroSignature, nonemptySignature, L1Norm<int>(), flow);
+        earthMoverDistance(zeroSignature, nonemptySignature, L1Norm<int>(),
+                flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -404,7 +408,8 @@ public:
         }
         try
         {
-        emd(nonemptySignature, zeroSignature, L1Norm<int>(), flow);
+        earthMoverDistance(nonemptySignature, zeroSignature, L1Norm<int>(),
+                flow);
         }
         catch(vigra::ContractViolation &c)
         {
@@ -446,7 +451,7 @@ public:
                 // flow size is bounded by n1 + n2 - 1 where n1 and n2 is the
                 // number of bins in the source and target signatures
                 // respectively
-                e = emd(sig, sig, L1Norm<int>(), flow);
+                e = earthMoverDistance(sig, sig, L1Norm<int>(), flow);
                 shouldMsg(e == 0, "EMD to self should be 0");
                 shouldMsg(flow.size() == sig.size(),
                         "Flow to self should have one arrow for each bin in the signature.");
@@ -489,10 +494,10 @@ public:
                             random);
                     dSig.randomize(sBound*dBound * weightFactor, dBound,
                             random);
-                    e1 = emd(sSig, dSig, L1Norm<int>(), oFlow);
+                    e1 = earthMoverDistance(sSig, dSig, L1Norm<int>(), oFlow);
                     checkFlowProperties(sSig, dSig, oFlow);
 
-                    e2 = emd(dSig, sSig, L1Norm<int>(), rFlow);
+                    e2 = earthMoverDistance(dSig, sSig, L1Norm<int>(), rFlow);
                     checkFlowProperties(dSig, sSig, rFlow);
                     shouldEqualToleranceMessage(e1, e2, errorTolerance,
                             "emd(s1, s2) != emd(s2, s1)");
@@ -536,7 +541,8 @@ public:
             sourceSignature.weights_[0] = weight;
             targetSignature.weights_[0] = weight;
 
-            e = emd(sourceSignature, targetSignature, L1Norm<int>(), flow);
+            e = earthMoverDistance(sourceSignature, targetSignature,
+                    L1Norm<int>(), flow);
             shouldMsg(flow.size() == 1,
                     "Flow between single entry signatures should have 1 element.");
             shouldEqualToleranceMessage(e, L1Norm<int>()(sBinIndex, dBinIndex),
@@ -580,7 +586,8 @@ public:
 
                 manySig.randomize(weight, cBound, random);
 
-                e = emd(singleSignature, manySig, L1Norm<int>(), flow);
+                e = earthMoverDistance(singleSignature, manySig,
+                        L1Norm<int>(), flow);
                 shouldMsg(flow.size() == manySig.size(),
                         "Flow should have one arrow for each bin in the target signature.");
                 checkFlowProperties(singleSignature, manySig, flow);
@@ -599,7 +606,8 @@ public:
                         "emd not equal to expected value.");
 
                 flow.clear();
-                e = emd(manySig, singleSignature, L1Norm<int>(), flow);
+                e = earthMoverDistance(manySig, singleSignature,
+                        L1Norm<int>(), flow);
                 shouldMsg(flow.size() == manySig.size(),
                         "Flow should have one arrow for each bin in the source signature.");
                 checkFlowProperties(manySig, singleSignature, flow);
@@ -639,7 +647,7 @@ public:
                             random);
                     dSig.randomize(random.uniform(0., maxWeight), dBound,
                             random);
-                    e1 = emd(sSig, dSig, L1Norm<int>(), flow);
+                    e1 = earthMoverDistance(sSig, dSig, L1Norm<int>(), flow);
                     checkFlowProperties(sSig, dSig, flow);
 
                     // scale source and target weights
@@ -649,7 +657,7 @@ public:
 
                     flow.clear();
 
-                    e2 = emd(sSig, dSig, L1Norm<int>(), flow);
+                    e2 = earthMoverDistance(sSig, dSig, L1Norm<int>(), flow);
                     shouldEqualToleranceMessage(e1, e2, errorTolerance,
                             "emd should be invariant under scaling weights.");
                     checkFlowProperties(sSig, dSig, flow);
