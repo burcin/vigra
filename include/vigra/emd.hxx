@@ -421,8 +421,17 @@ double
 earthMoverDistance(Signature<FeatureType> const & signature1, 
                    Signature<FeatureType> const & signature2,
                    EMDFlow & flow,
-                   EMDOptions const & options = EMDOptions())
+                   EMDOptions const & options = EMDOptions());
+
+template<>
+double
+earthMoverDistance<int>(Signature<int> const & signature1,
+                   Signature<int> const & signature2,
+                   EMDFlow & flow,
+                   EMDOptions const & options)
 {
+    return earthMoverDistance(signature1, signature2, L1Norm<int>(),
+            flow, options);
 }
 
     // likewise, but without computing the flow
@@ -430,8 +439,15 @@ template<class FeatureType>
 double
 earthMoverDistance(Signature<FeatureType> const & signature1, 
                    Signature<FeatureType> const & signature2,
-                   EMDOptions const & options = EMDOptions())
+                   EMDOptions const & options = EMDOptions());
+
+template<>
+double
+earthMoverDistance<int>(Signature<int> const & signature1,
+                   Signature<int> const & signature2,
+                   EMDOptions const & options)
 {
+    return earthMoverDistance(signature1, signature2, L1Norm<int>(), options);
 }
 
 template<typename feature_t>

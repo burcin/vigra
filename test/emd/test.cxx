@@ -494,10 +494,10 @@ public:
                             random);
                     dSig.randomize(sBound*dBound * weightFactor, dBound,
                             random);
-                    e1 = earthMoverDistance(sSig, dSig, L1Norm<int>(), oFlow);
+                    e1 = earthMoverDistance(sSig, dSig, oFlow);
                     checkFlowProperties(sSig, dSig, oFlow);
 
-                    e2 = earthMoverDistance(dSig, sSig, L1Norm<int>(), rFlow);
+                    e2 = earthMoverDistance(dSig, sSig, rFlow);
                     checkFlowProperties(dSig, sSig, rFlow);
                     shouldEqualToleranceMessage(e1, e2, errorTolerance,
                             "emd(s1, s2) != emd(s2, s1)");
