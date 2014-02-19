@@ -159,8 +159,8 @@ public:
     typedef int example_index; // index of the sample in the feature matrix
 
     typedef std::map<example_index, std::vector<std::pair<tree_index,
-            leaf_index> > >::iterator KeyIt;
-    typedef std::vector<std::pair<tree_index, leaf_index> >::iterator ValueIt;
+            leaf_index> > >::const_iterator KeyIt;
+    typedef std::vector<std::pair<tree_index, leaf_index> >::const_iterator ValueIt;
 
     int current_tree;
     int current_sample;
@@ -204,7 +204,7 @@ public:
         //    ++current_sample;
     }
 
-    void save(std::string filen, std::string pathn)
+    void save(std::string filen, std::string pathn) const
     {
         //FIXME This might be slow;
         ArrayVector<int> temp;
@@ -222,7 +222,7 @@ public:
 
             //std::cout << "arr-size " << arr_size << std::endl;
 
-            std::vector<std::pair<tree_index, leaf_index> >& temp_vec =
+            const std::vector<std::pair<tree_index, leaf_index> >& temp_vec =
                     (*it).second;
 
             for (int ii = 0; ii < temp_vec.size(); ii++)
@@ -336,9 +336,9 @@ public:
     typedef int example_index; // index of the samples in the feature matrix
     typedef std::vector<double> Point; //structure for the point in the matrix includes all the labels with the continuous regression variables
 
-    typedef std::map<std::pair<tree_index, leaf_index>, std::vector<Point> >::iterator
+    typedef std::map<std::pair<tree_index, leaf_index>, std::vector<Point> >::const_iterator
             KeyIt;
-    typedef std::vector<Point>::iterator ValueIt;
+    typedef std::vector<Point>::const_iterator ValueIt;
 
     int current_tree;
     int current_sample;
@@ -452,7 +452,7 @@ public:
         current_tree = index;
     }
 
-    void save(std::string filen, std::string pathn)
+    void save(std::string filen, std::string pathn) const
     {
         //FIXME This might be slow save the mapping as a single array
         ArrayVector<double> temp;
@@ -472,7 +472,7 @@ public:
 
             temp.push_back(dim); //this tells how man parametes were in the three
 
-            double prob = mapping_to_prob[(*it).first];
+            double prob = mapping_to_prob.at((*it).first);
             temp.push_back(prob);
 
 
