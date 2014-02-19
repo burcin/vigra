@@ -132,6 +132,7 @@ void defineUnsupervised()
 
 void defineRandomForest();
 void defineRandomForestOld();
+void defineHoughForest();
 
 } // namespace vigra
 
@@ -145,6 +146,7 @@ BOOST_PYTHON_MODULE_INIT(learning)
     defineUnsupervised();
     defineRandomForest();
     defineRandomForestOld();
+    defineHoughForest();
 }
 
 

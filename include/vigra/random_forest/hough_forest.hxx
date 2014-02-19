@@ -92,6 +92,11 @@ public:
         initParams();
     }
 
+    Hough_Forest()
+    {
+        initParams();
+    }
+
     void initParams()
     {
         dim_labels = 0;
@@ -313,7 +318,7 @@ bool hf_import_HDF5(Hough_Forest<LabelType, T> &Hf, const std::string &fname)
 }
 
 template<class LabelType, class T>
-bool hf_saveToHDF5(const Hough_Forest<LabelType,T> &Hf,
+void hf_saveToHDF5(const Hough_Forest<LabelType,T> &Hf,
         const std::string &fname)
 {
     if(boost::filesystem::exists(fname))
@@ -327,8 +332,6 @@ bool hf_saveToHDF5(const Hough_Forest<LabelType,T> &Hf,
     Hf.visitor_learning.save(fname,"parameters/vLearning");
 
     writeHDF5(fname.c_str(),"parameters/tr_labels",Hf.tr_labels);
-
-    return 1;
 }
 
 #endif // HasHDF5

@@ -43,9 +43,10 @@ VIGRA_ADD_NUMPY_MODULE(analysis SOURCES
 VIGRA_ADD_NUMPY_MODULE(learning SOURCES
     random_forest_old.cxx
     random_forest.cxx
+    hough_forest.cxx
     learning.cxx
   LIBRARIES   
-    ${VIGRANUMPY_IMPEX_LIBRARIES}
+    ${VIGRANUMPY_IMPEX_LIBRARIES} boost_system boost_filesystem
   VIGRANUMPY)
    
 VIGRA_ADD_NUMPY_MODULE(colors SOURCES
