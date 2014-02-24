@@ -1,3 +1,6 @@
+#define PY_ARRAY_UNIQUE_SYMBOL vigranumpylearning_PyArray_API
+#define NO_IMPORT_ARRAY
+
 #include <boost/python.hpp>
 #include <vigra/numpy_array.hxx>
 #include <vigra/numpy_array_converters.hxx>
