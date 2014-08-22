@@ -377,6 +377,36 @@ copyMultiArrayImpl(SrcIterator s, SrcShape const & sshape, SrcAccessor src,
         }
     }
 }
+
+template <class SrcIterator, class SrcShape, class SrcAccessor,
+          class DestIterator, class DestShape, class DestAccessor, int N>
+void
+copyMultiArrayImplOuter(SrcIterator s, SrcShape const & sshape, SrcAccessor src,
+                   DestIterator d, DestShape const & dshape, DestAccessor dest,
+                   MetaInt<N>)
+{
+    DestIterator dend = d + dshape[N];
+    if(sshape[N] == 1)
+    {
+#ifdef OPENMP
+#pragma omp parallel
+#endif
+        for(; d < dend; ++d)
+        {
+            copyMultiArrayImpl(s.begin(), sshape, src, d.begin(), dshape, dest, MetaInt<N-1>());
+        }
+    }
+    else
+    {
+#ifdef OPENMP
+#pragma omp parallel
+#endif
+        for(; d < dend; ++s, ++d)
+        {
+            copyMultiArrayImpl(s.begin(), sshape, src, d.begin(), dshape, dest, MetaInt<N-1>());
+        }
+    }
+}
     
 /** \brief Copy a multi-dimensional array.
 
@@ -527,7 +557,7 @@ copyMultiArray(SrcIterator s,
                SrcShape const & shape, SrcAccessor src,
                DestIterator d, DestAccessor dest)
 {    
-    copyMultiArrayImpl(s, shape, src, d, shape, dest, MetaInt<SrcIterator::level>());
+    copyMultiArrayImplOuter(s, shape, src, d, shape, dest, MetaInt<SrcIterator::level>());
 }
 
 template <class SrcIterator, class SrcShape, class SrcAccessor,
@@ -543,7 +573,7 @@ copyMultiArray(SrcIterator s, SrcShape const & sshape, SrcAccessor src,
             "copyMultiArray(): mismatch between source and destination shapes:\n"
             "length of each source dimension must either be 1 or equal to the corresponding "
             "destination length.");
-    copyMultiArrayImpl(s, sshape, src, d, dshape, dest, MetaInt<SrcIterator::level>());
+    copyMultiArrayImplOuter(s, sshape, src, d, dshape, dest, MetaInt<SrcIterator::level>());
 }
 
 template <class SrcIterator, class SrcShape, class SrcAccessor,
